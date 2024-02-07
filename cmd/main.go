@@ -13,7 +13,7 @@ func main() {
 	// Initialize logger
 	logger.InitLogger()
 
-	// Create a new router
+	// Initial new router
 	r := mux.NewRouter()
 	for _, endpoint := range routes.Endpoints {
 		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)

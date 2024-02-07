@@ -1,5 +1,6 @@
 package electric
 
+// Represents single electric data at specific time
 type Data struct {
 	OriginalTime string  `json:"orig_time"`
 	Time         string  `json:"time"`
@@ -8,28 +9,30 @@ type Data struct {
 	IsToday      bool    `json:"isToday"`
 }
 
+// Represents a series of electric data with the name of unit (ex: c/kwh)
 type PriceSeries struct {
 	Name string `json:"name"`
 	Data []Data `json:"data"`
 }
 
-// Group represents 'hour', 'day', week', 'month', 'year'
+// Represent a series data of electric price in targeting group
 type PriceData struct {
-	Group  string        `json:"group"`
+	Group  string        `json:"group"` // Group represents 'hour', 'day', 'week', 'month', 'year'
 	Series []PriceSeries `json:"series"`
 }
 
+// Represent as a struct of response data when fetching electric price data
 type PriceResponse struct {
 	Data   PriceData `json:"data"`
 	Status string    `json:"status"`
 }
 
-// vatIncluded will affect when it is different than 0
+// Represents as request body when client (web, mobile, backend service) call to get market price in specific time range
 type PriceRequest struct {
 	StartDate         string  `json:"starttime"`
 	EndDate           string  `json:"endtime"`
-	Marginal          float64 `json:"margin"`
+	Marginal          float64 `json:"margin"` // Marginal is not allowed to be empty, it is ok to equal to "0"
 	Group             string  `json:"group"`
-	VatIncluded       int32   `json:"include_vat"`
-	CompareToLastYear int32   `json:"compare_to_last_year"`
+	VatIncluded       int32   `json:"include_vat"`          // VatIncluded is allowed to equal to "0" and "1"
+	CompareToLastYear int32   `json:"compare_to_last_year"` // CompareToLastYear is allowed to equal to "0" and "1"
 }
