@@ -51,6 +51,6 @@ func formatRequestParameters() (endPoint string, err error) {
 	// func formatRequestParameters(requestParameters PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", BASE_URL, SPOT_PRICE, GET_V1)
 
-	logger.Logger.Info("request url", zap.String("url", url))
+	logger.Logger.Info("request url", zap.String("url", url)) // todo: remove this log
 	return url, nil
 }
