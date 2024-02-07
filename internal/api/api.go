@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func GetData(w http.ResponseWriter, r *http.Request) {
+func GetMarketPrice(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	externalData, err := electric.FetchSpotPrice()

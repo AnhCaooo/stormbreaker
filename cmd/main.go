@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AnhCaooo/stormbreaker/internal/api"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
+	"github.com/AnhCaooo/stormbreaker/internal/routes"
 	"github.com/gorilla/mux"
 )
 
@@ -15,9 +15,9 @@ func main() {
 
 	// Create a new router
 	r := mux.NewRouter()
-
-	// Define route for GET request to /data
-	r.HandleFunc("/data", api.GetData).Methods("GET")
+	for _, endpoint := range routes.Endpoints {
+		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
+	}
 
 	// Start server
 	logger.Logger.Info("Server started on :8080")
