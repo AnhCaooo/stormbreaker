@@ -3,19 +3,18 @@ package electric
 import (
 	"fmt"
 	"math"
+	"time"
 )
-
-var supportedGroups = []string{"hour", "day", "week", "month", "year"}
 
 func formatRequestParameters(requestParameters PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", BASE_URL, SPOT_PRICE, GET_V1)
 
-	if !isValidString(requestParameters.StartDate) {
-		return "", fmt.Errorf("start date should have value")
+	if !isValidDate(requestParameters.StartDate) {
+		return "", fmt.Errorf("start date should have value in correct format 'YYYY-MM-DD'")
 	}
 
-	if !isValidString(requestParameters.EndDate) {
-		return "", fmt.Errorf("end date should have value")
+	if !isValidDate(requestParameters.EndDate) {
+		return "", fmt.Errorf("end date should have value in correct format 'YYYY-MM-DD'")
 	}
 
 	if !isValidGroup(requestParameters.Group) {
@@ -48,11 +47,14 @@ func isValidFloat(value float64) bool {
 	return false
 }
 
-func isValidString(value string) bool {
-	return value != ""
+func isValidDate(value string) bool {
+	const layout string = "2006-01-02" // this is just the layout of YYYY-MM-DD
+	_, err := time.Parse(layout, value)
+	return err == nil
 }
 
 func isValidGroup(value string) bool {
+	var supportedGroups = []string{"hour", "day", "week", "month", "year"}
 	for _, group := range supportedGroups {
 		if value == group {
 			return true
