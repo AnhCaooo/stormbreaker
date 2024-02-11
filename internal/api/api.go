@@ -10,7 +10,7 @@ import (
 )
 
 // Fetch the market spot price of electric in Finland
-func GetMarketPrice(w http.ResponseWriter, r *http.Request) {
+func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	var reqBody electric.PriceRequest
 	w.Header().Set("Content-Type", "application/json")
 

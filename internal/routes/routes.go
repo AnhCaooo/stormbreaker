@@ -16,7 +16,7 @@ type Endpoint struct {
 var Endpoints = []Endpoint{
 	{
 		Path:    "/v1/market-price",
-		Handler: api.GetMarketPrice,
+		Handler: api.PostMarketPrice,
 		Method:  "POST",
 	},
 }
