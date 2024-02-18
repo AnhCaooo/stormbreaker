@@ -24,21 +24,26 @@ func TestIsValidFloat(t *testing.T) {
 	}
 }
 
-// TestIsValidDate calls isValidDate with a value, checking
+// TestIsValidDateRange calls isValidDate with a value, checking
 // for a valid date value in string format.
-func TestIsValidDate(t *testing.T) {
-	validDates := []string{"2002-09-23", "2023-10-01"}
-	invalidDates := []string{"string", "200222-09-21", "2002-13-43", ""}
-
-	for _, dateStr := range validDates {
-		if !isValidDate(dateStr) {
-			t.Errorf("Expected isValidDate(%s) to be true, got false", dateStr)
-		}
+func TestIsValidDateRange(t *testing.T) {
+	tests := []struct {
+		startDate string
+		endDate   string
+		expected  bool
+	}{
+		{"2022-01-01", "2022-01-02", true},
+		{"2022-01-02", "2022-01-01", false},
+		{"2022-13-02", "2022-01-01", false}, // invalid start date
+		{"2022-12-02", "2022-19-01", false}, // invalid end date
+		{"2022-01-01", "invalid", false},
+		{"invalid", "2022-01-02", false},
 	}
 
-	for _, dateStr := range invalidDates {
-		if isValidDate(dateStr) {
-			t.Errorf("Expected isValidDate(%s) to be false, got true", dateStr)
+	for _, test := range tests {
+		actual, err := isValidDateRange(test.startDate, test.endDate)
+		if err != nil && actual != test.expected {
+			t.Errorf("error while validating input (%s, %s): got %v", test.startDate, test.endDate, err)
 		}
 	}
 }

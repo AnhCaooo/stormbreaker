@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Fetch the market spot price of electric in Finland
+// Fetch the market spot price of electric in Finland in any times
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	var reqBody electric.PriceRequest
 	w.Header().Set("Content-Type", "application/json")

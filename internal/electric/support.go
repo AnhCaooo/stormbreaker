@@ -9,12 +9,9 @@ import (
 func formatRequestParameters(requestParameters PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", BASE_URL, SPOT_PRICE, GET_V1)
 
-	if !isValidDate(requestParameters.StartDate) {
-		return "", fmt.Errorf("start date should have value in correct format 'YYYY-MM-DD'")
-	}
-
-	if !isValidDate(requestParameters.EndDate) {
-		return "", fmt.Errorf("end date should have value in correct format 'YYYY-MM-DD'")
+	isValidDateRange, err := isValidDateRange(requestParameters.StartDate, requestParameters.EndDate)
+	if !isValidDateRange {
+		return "", err
 	}
 
 	if !isValidGroup(requestParameters.Group) {
@@ -47,10 +44,31 @@ func isValidFloat(value float64) bool {
 	return false
 }
 
-func isValidDate(value string) bool {
+func validDate(value string) (dateTime time.Time, err error) {
 	const layout string = "2006-01-02" // this is just the layout of YYYY-MM-DD
-	_, err := time.Parse(layout, value)
-	return err == nil
+	dateTime, err = time.Parse(layout, value)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("date should have value in correct format 'YYYY-MM-DD'")
+	}
+	return dateTime, nil
+}
+
+func isValidDateRange(startDate, endDate string) (isValid bool, err error) {
+
+	startDateTime, err := validDate(startDate)
+	if err != nil {
+		return isValid, fmt.Errorf("failed to validate start date. Error: %s", err.Error())
+	}
+
+	endDateTime, err := validDate(endDate)
+	if err != nil {
+		return isValid, fmt.Errorf("failed to validate end date. Error: %s", err.Error())
+	}
+
+	if startDateTime.Before(endDateTime) {
+		return true, nil
+	}
+	return false, fmt.Errorf("start date cannot after end date")
 }
 
 func isValidGroup(value string) bool {
