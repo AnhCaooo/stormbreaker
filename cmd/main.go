@@ -9,6 +9,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// todo: need handlings if request is not existing in routes
+// todo: api docs
+// todo: new endpoint?: next day, today price
+// todo: improve logging as now it seems that there is no handlings for 404 NOT FOUND
 func main() {
 	// Initialize logger
 	logger.InitLogger()

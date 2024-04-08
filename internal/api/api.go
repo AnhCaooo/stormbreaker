@@ -17,23 +17,27 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
 		logger.Logger.Error("failed to decode request body", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	externalData, err := electric.FetchSpotPrice(reqBody)
+	externalData, errorType, err := electric.FetchSpotPrice(reqBody)
 	if err != nil {
-		logger.Logger.Error("failed to fetch data from external source", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		if errorType == electric.SERVER_ERROR {
+			logger.Logger.Error("failed to fetch data", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		logger.Logger.Error("failed to fetch data", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := json.NewEncoder(w).Encode(externalData); err != nil {
 		logger.Logger.Error("failed to encode response data", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	logger.Logger.Debug("stock price of electric", zap.Any("market-price", externalData))
 	logger.Logger.Info("get market price of electric successfully")
 }
