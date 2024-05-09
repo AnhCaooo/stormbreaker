@@ -33,8 +33,9 @@ func TestIsValidDateRange(t *testing.T) {
 		expected  bool
 	}{
 		{"2022-01-01", "2022-01-02", true},
-		{"2022-01-02", "2022-01-01", false},
-		{"2022-13-02", "2022-01-01", false}, // invalid start date
+		{"2022-05-02", "2022-05-01", false},
+		{"2022-05-09", "2022-05-09", true},
+		{"2022-13-02", "2022-03-01", false}, // invalid start date
 		{"2022-12-02", "2022-19-01", false}, // invalid end date
 		{"2022-01-01", "invalid", false},
 		{"invalid", "2022-01-02", false},

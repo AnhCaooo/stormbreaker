@@ -65,7 +65,7 @@ func isValidDateRange(startDate, endDate string) (isValid bool, err error) {
 		return isValid, fmt.Errorf("failed to validate end date. Error: %s", err.Error())
 	}
 
-	if startDateTime.Before(endDateTime) {
+	if startDateTime == endDateTime || startDateTime.Before(endDateTime) {
 		return true, nil
 	}
 	return false, fmt.Errorf("start date cannot after end date")

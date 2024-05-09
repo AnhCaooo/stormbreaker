@@ -25,7 +25,9 @@ func main() {
 	r.MethodNotAllowedHandler = http.HandlerFunc(api.NotAllowedHandler)
 	r.NotFoundHandler = http.HandlerFunc(api.NotFoundHandler)
 
+	// Middleware
 	r.Use(middleware.LoggingMiddleware)
+
 	// Start server
 	logger.Logger.Info("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
