@@ -19,4 +19,9 @@ var Endpoints = []Endpoint{
 		Handler: api.PostMarketPrice,
 		Method:  "POST",
 	},
+	{
+		Path:    "/v1/market-price/today-tomorrow",
+		Handler: api.GetTodayTomorrowPrice,
+		Method:  "GET",
+	},
 }

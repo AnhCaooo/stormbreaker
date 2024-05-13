@@ -41,3 +41,12 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 
 	logger.Logger.Info("get market price of electric successfully")
 }
+
+// Fetch and return the exchange price for today and tomorrow.
+// If tomorrow's price is not available yet, return empty struct.
+// Then client needs to show readable information to indicate that data is not available yet.
+func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+
+}
