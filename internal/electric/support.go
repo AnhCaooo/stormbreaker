@@ -159,13 +159,17 @@ func getTomorrowPrices(response PriceResponse) (tomorrowPrice *DailyPrice, err e
 
 	if len(filteredPrices) == 24 {
 		pricesAvailable = true
+	} else {
+		// clear the filtered prices so that client will not get confused why there is only 1 price at 00:00. This is legacy from external source
+		// ? At least of now, ignore and show empty data. AnhC - 15th May 2024
+		filteredPrices = []Data{}
 	}
 
 	tomorrowPrice = &DailyPrice{
 		Available: pricesAvailable,
 		Prices: PriceSeries{
 			Name: priceUnit,
-			Data: pricesData,
+			Data: filteredPrices,
 		},
 	}
 	return
