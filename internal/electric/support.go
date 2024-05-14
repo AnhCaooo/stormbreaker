@@ -109,6 +109,7 @@ func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
 
 func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) {
 	filteredPrices := make([]Data, 0)
+	pricesAvailable := false
 
 	priceUnit := response.Data.Series[0].Name
 	pricesData := response.Data.Series[0].Data
@@ -125,10 +126,12 @@ func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) 
 
 	if len(filteredPrices) != 24 {
 		return nil, fmt.Errorf("the amount of price per hour exceed 24. Its length is %d", len(filteredPrices))
+	} else {
+		pricesAvailable = true
 	}
 
 	todayPrice = &DailyPrice{
-		Available: true,
+		Available: pricesAvailable,
 		Prices: PriceSeries{
 			Name: priceUnit,
 			Data: filteredPrices,
@@ -137,6 +140,33 @@ func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) 
 	return
 }
 
-func getTomorrowPrice(response PriceResponse) (tomorrowPrice DailyPrice) {
+func getTomorrowPrice(response PriceResponse) (tomorrowPrice *DailyPrice, err error) {
+	filteredPrices := make([]Data, 0)
+	pricesAvailable := false
+
+	priceUnit := response.Data.Series[0].Name
+	pricesData := response.Data.Series[0].Data
+
+	if len(pricesData) == 0 {
+		return nil, fmt.Errorf("failed to get price for tomorrow from the response: %v", response)
+	}
+
+	for _, price := range pricesData {
+		if !price.IsToday {
+			filteredPrices = append(filteredPrices, price)
+		}
+	}
+
+	if len(filteredPrices) == 24 {
+		pricesAvailable = true
+	}
+
+	tomorrowPrice = &DailyPrice{
+		Available: pricesAvailable,
+		Prices: PriceSeries{
+			Name: priceUnit,
+			Data: pricesData,
+		},
+	}
 	return
 }

@@ -56,13 +56,21 @@ func BuildTodayTomorrowAsBodyRequest() (body PriceRequest, err error) {
 	return body, nil
 }
 
+// todo: any better ways to optimize this code. Go routine?
 func MapToTodayTomorrowResponse(data *PriceResponse) (response *TodayTomorrowPrice, err error) {
 	todayPrices, err := getTodayPrices(*data)
 	if err != nil {
 		return nil, err
 	}
 
-	logger.Logger.Info("get today", zap.Any("today", todayPrices))
+	tomorrowPrices, err := getTomorrowPrice(*data)
+	if err != nil {
+		return nil, err
+	}
 
+	response = &TodayTomorrowPrice{
+		Today:    *todayPrices,
+		Tomorrow: *tomorrowPrices,
+	}
 	return
 }
