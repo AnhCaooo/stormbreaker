@@ -63,7 +63,7 @@ func MapToTodayTomorrowResponse(data *PriceResponse) (response *TodayTomorrowPri
 		return nil, err
 	}
 
-	tomorrowPrices, err := getTomorrowPrice(*data)
+	tomorrowPrices, err := getTomorrowPrices(*data)
 	if err != nil {
 		return nil, err
 	}

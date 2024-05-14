@@ -140,7 +140,7 @@ func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) 
 	return
 }
 
-func getTomorrowPrice(response PriceResponse) (tomorrowPrice *DailyPrice, err error) {
+func getTomorrowPrices(response PriceResponse) (tomorrowPrice *DailyPrice, err error) {
 	filteredPrices := make([]Data, 0)
 	pricesAvailable := false
 
