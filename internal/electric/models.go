@@ -36,3 +36,15 @@ type PriceRequest struct {
 	VatIncluded       int32   `json:"include_vat"`          // VatIncluded is allowed to equal to "0" and "1"
 	CompareToLastYear int32   `json:"compare_to_last_year"` // CompareToLastYear is allowed to equal to "0" and "1"
 }
+
+// Represents a struct of today and tomorrow exchange price
+type TodayTomorrowPrice struct {
+	Today    DailyPrice `json:"today"`
+	Tomorrow DailyPrice `json:"tomorrow"`
+}
+
+// Represents a struct of daily price and bool flag to indicate does tomorrow's price available or not
+type DailyPrice struct {
+	Available bool        `json:"available"`
+	Prices    PriceSeries `json:"prices"`
+}

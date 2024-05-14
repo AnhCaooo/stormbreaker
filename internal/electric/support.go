@@ -88,3 +88,55 @@ func isValidInt(value int32) bool {
 	}
 	return true
 }
+
+func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
+	// Get current time
+	now := time.Now()
+
+	// Get year, month, and day components
+	year, month, day := now.Date()
+
+	// Get today's date
+	today := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
+
+	// Get tomorrow's date by adding one day
+	tomorrow := today.AddDate(0, 0, 1)
+
+	todayDate = today.Format(DATE_FORMAT)
+	tomorrowDate = tomorrow.Format(DATE_FORMAT)
+	return
+}
+
+func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) {
+	filteredPrices := make([]Data, 0)
+
+	priceUnit := response.Data.Series[0].Name
+	pricesData := response.Data.Series[0].Data
+	if len(pricesData) == 0 {
+		return nil, fmt.Errorf("failed to get price for today from the response: %v", response)
+	}
+
+	for _, price := range pricesData {
+
+		if price.IsToday {
+			filteredPrices = append(filteredPrices, price)
+		}
+	}
+
+	if len(filteredPrices) != 24 {
+		return nil, fmt.Errorf("the amount of price per hour exceed 24. Its length is %d", len(filteredPrices))
+	}
+
+	todayPrice = &DailyPrice{
+		Available: true,
+		Prices: PriceSeries{
+			Name: priceUnit,
+			Data: filteredPrices,
+		},
+	}
+	return
+}
+
+func getTomorrowPrice(response PriceResponse) (tomorrowPrice DailyPrice) {
+	return
+}

@@ -3,7 +3,6 @@ package electric
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"go.uber.org/zap"
@@ -57,20 +56,13 @@ func BuildTodayTomorrowAsBodyRequest() (body PriceRequest, err error) {
 	return body, nil
 }
 
-func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
-	// Get current time
-	now := time.Now()
+func MapToTodayTomorrowResponse(data *PriceResponse) (response *TodayTomorrowPrice, err error) {
+	todayPrices, err := getTodayPrices(*data)
+	if err != nil {
+		return nil, err
+	}
 
-	// Get year, month, and day components
-	year, month, day := now.Date()
+	logger.Logger.Info("get today", zap.Any("today", todayPrices))
 
-	// Get today's date
-	today := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
-
-	// Get tomorrow's date by adding one day
-	tomorrow := today.AddDate(0, 0, 1)
-
-	todayDate = today.Format(DATE_FORMAT)
-	tomorrowDate = tomorrow.Format(DATE_FORMAT)
 	return
 }
