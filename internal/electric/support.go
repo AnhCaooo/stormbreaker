@@ -88,36 +88,3 @@ func isValidInt(value int32) bool {
 	}
 	return true
 }
-
-// get request body for '/market-price/today-tomorrow'
-func BuildTodayTomorrowAsBodyRequest() (body PriceRequest, err error) {
-	today, tomorrow := getTodayAndTomorrowDateAsString()
-
-	body = PriceRequest{
-		StartDate:         today,
-		EndDate:           tomorrow,
-		Marginal:          0.59, // todo: this field should has default value at the beginning. However, it would be nice to give users have their own customizations and then read from db as it is different between users
-		Group:             "hour",
-		VatIncluded:       1, // todo: this field by default should be 1. However, it would be nice to give users have their own customizations
-		CompareToLastYear: 0,
-	}
-	return body, nil
-}
-
-func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
-	// Get current time
-	now := time.Now()
-
-	// Get year, month, and day components
-	year, month, day := now.Date()
-
-	// Get today's date
-	today := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
-
-	// Get tomorrow's date by adding one day
-	tomorrow := today.AddDate(0, 0, 1)
-
-	todayDate = today.Format(DATE_FORMAT)
-	tomorrowDate = tomorrow.Format(DATE_FORMAT)
-	return
-}
