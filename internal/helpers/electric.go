@@ -1,15 +1,14 @@
-package electric
+package helpers
 
 import (
 	"fmt"
-	"math"
 	"time"
+
+	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
-const DATE_FORMAT string = "2006-01-02" // this is just the layout of YYYY-MM-DD
-
-func formatRequestParameters(requestParameters PriceRequest) (endPoint string, err error) {
-	url := fmt.Sprintf("%s/%s/%s", BASE_URL, SPOT_PRICE, GET_V1)
+func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
+	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
 	isValidDateRange, err := isValidDateRange(requestParameters.StartDate, requestParameters.EndDate)
 	if !isValidDateRange {
@@ -38,55 +37,38 @@ func formatRequestParameters(requestParameters PriceRequest) (endPoint string, e
 	), nil
 }
 
-func isValidFloat(value float64) bool {
-	// Check if value is not NaN and not infinite
-	if !math.IsNaN(value) && !math.IsInf(value, 0) {
-		return true
+// get request body for '/market-price/today-tomorrow'
+func BuildTodayTomorrowAsBodyRequest() (body models.PriceRequest, err error) {
+	today, tomorrow := getTodayAndTomorrowDateAsString()
+
+	body = models.PriceRequest{
+		StartDate:         today,
+		EndDate:           tomorrow,
+		Marginal:          0.59, // todo: this field should has default value at the beginning. However, it would be nice to give users have their own customizations and then read from db as it is different between users
+		Group:             "hour",
+		VatIncluded:       1, // todo: this field by default should be 1. However, it would be nice to give users have their own customizations
+		CompareToLastYear: 0,
 	}
-	return false
+	return body, nil
 }
 
-func validDate(value string) (dateTime time.Time, err error) {
-	dateTime, err = time.Parse(DATE_FORMAT, value)
+// todo: any better ways to optimize this code. Go routine?
+func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.TodayTomorrowPrice, err error) {
+	todayPrices, err := getTodayPrices(*data)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("date should have value in correct format 'YYYY-MM-DD'")
+		return nil, err
 	}
-	return dateTime, nil
-}
 
-func isValidDateRange(startDate, endDate string) (isValid bool, err error) {
-
-	startDateTime, err := validDate(startDate)
+	tomorrowPrices, err := getTomorrowPrices(*data)
 	if err != nil {
-		return isValid, fmt.Errorf("failed to validate start date. Error: %s", err.Error())
+		return nil, err
 	}
 
-	endDateTime, err := validDate(endDate)
-	if err != nil {
-		return isValid, fmt.Errorf("failed to validate end date. Error: %s", err.Error())
+	response = &models.TodayTomorrowPrice{
+		Today:    *todayPrices,
+		Tomorrow: *tomorrowPrices,
 	}
-
-	if startDateTime == endDateTime || startDateTime.Before(endDateTime) {
-		return true, nil
-	}
-	return false, fmt.Errorf("start date cannot after end date")
-}
-
-func isValidGroup(value string) bool {
-	var supportedGroups = []string{"hour", "day", "week", "month", "year"}
-	for _, group := range supportedGroups {
-		if value == group {
-			return true
-		}
-	}
-	return false
-}
-
-func isValidInt(value int32) bool {
-	if value < 0 || value > 1 {
-		return false
-	}
-	return true
+	return
 }
 
 func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
@@ -107,8 +89,8 @@ func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
 	return
 }
 
-func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) {
-	filteredPrices := make([]Data, 0)
+func getTodayPrices(response models.PriceResponse) (todayPrice *models.DailyPrice, err error) {
+	filteredPrices := make([]models.Data, 0)
 	pricesAvailable := false
 
 	priceUnit := response.Data.Series[0].Name
@@ -130,9 +112,9 @@ func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) 
 		pricesAvailable = true
 	}
 
-	todayPrice = &DailyPrice{
+	todayPrice = &models.DailyPrice{
 		Available: pricesAvailable,
-		Prices: PriceSeries{
+		Prices: models.PriceSeries{
 			Name: priceUnit,
 			Data: filteredPrices,
 		},
@@ -140,8 +122,8 @@ func getTodayPrices(response PriceResponse) (todayPrice *DailyPrice, err error) 
 	return
 }
 
-func getTomorrowPrices(response PriceResponse) (tomorrowPrice *DailyPrice, err error) {
-	filteredPrices := make([]Data, 0)
+func getTomorrowPrices(response models.PriceResponse) (tomorrowPrice *models.DailyPrice, err error) {
+	filteredPrices := make([]models.Data, 0)
 	pricesAvailable := false
 
 	priceUnit := response.Data.Series[0].Name
@@ -162,12 +144,12 @@ func getTomorrowPrices(response PriceResponse) (tomorrowPrice *DailyPrice, err e
 	} else {
 		// clear the filtered prices so that client will not get confused why there is only 1 price at 00:00. This is legacy from external source
 		// ? At least of now, ignore and show empty data. AnhC - 15th May 2024
-		filteredPrices = []Data{}
+		filteredPrices = []models.Data{}
 	}
 
-	tomorrowPrice = &DailyPrice{
+	tomorrowPrice = &models.DailyPrice{
 		Available: pricesAvailable,
-		Prices: PriceSeries{
+		Prices: models.PriceSeries{
 			Name: priceUnit,
 			Data: filteredPrices,
 		},

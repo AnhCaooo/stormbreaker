@@ -1,4 +1,12 @@
-package electric
+package models
+
+const (
+	BASE_URL     string = "https://oomi.fi/wp-json"
+	SPOT_PRICE   string = "spot-price"
+	GET_V1       string = "v1/get"
+	CLIENT_ERROR string = "client"
+	SERVER_ERROR string = "server"
+)
 
 // Represents single electric data at specific time
 type Data struct {
