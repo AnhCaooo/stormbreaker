@@ -12,7 +12,6 @@ import (
 )
 
 // todo: api docs
-// todo: new endpoint?: next day, today price
 func main() {
 	// Initialize logger
 	logger.InitLogger()

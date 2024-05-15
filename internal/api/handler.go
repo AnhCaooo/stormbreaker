@@ -10,7 +10,7 @@ import (
 func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	logger.Logger.Info("undefined endpoint", zap.String("method", r.Method), zap.String("endpoint", r.URL.Path))
-	w.Write([]byte("404 - Page not found"))
+	w.Write([]byte("404 - Not found"))
 }
 
 func NotAllowedHandler(w http.ResponseWriter, r *http.Request) {

@@ -56,6 +56,7 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	todayTomorrowPrice, errorType, err := electric.FetchSpotPrice(reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
