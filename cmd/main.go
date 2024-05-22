@@ -28,6 +28,6 @@ func main() {
 	r.Use(middleware.LoggingMiddleware)
 
 	// Start server
-	logger.Logger.Info("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	logger.Logger.Info("Server started on :5001")
+	log.Fatal(http.ListenAndServe(":5001", r))
 }

@@ -23,3 +23,13 @@ This command will give you total control of all libraries which are used in this
 ```bash
 go run cmd/main.go
 ```
+
+### Build Docker image locally
+
+```bash
+# Option 1
+docker build --tag stormbreaker .
+
+# Option 2
+docker build -t stormbreaker .
+```

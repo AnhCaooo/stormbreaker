@@ -1,7 +1,7 @@
-FROM golang:1.21
+FROM golang:alpine
 
-# Set destination for COPY
-WORKDIR /app
+# Set destination inside the container
+WORKDIR /usr/src/app
 
 # Download Go modules
 COPY go.mod go.sum ./
@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /stormbreaker ./cmd/
 # But we can document in the Dockerfile what ports
 # the application is going to listen on by default.
 # https://docs.docker.com/reference/dockerfile/#expose
-EXPOSE 8080
+EXPOSE 5001
 
 # Run
 CMD ["/stormbreaker"]
