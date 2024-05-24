@@ -1,7 +1,7 @@
 FROM golang:alpine
 
 # Set destination inside the container
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Download Go modules
 COPY go.mod go.sum ./
