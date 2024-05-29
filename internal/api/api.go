@@ -14,7 +14,6 @@ import (
 // Fetch the market spot price of electric in Finland in any times
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	var reqBody models.PriceRequest
-	w.Header().Set("Content-Type", "application/json")
 
 	err := json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
@@ -35,6 +34,7 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(externalData); err != nil {
 		logger.Logger.Error("failed to encode response data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -55,8 +55,6 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
 	todayTomorrowPrice, errorType, err := electric.FetchSpotPrice(reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
@@ -76,6 +74,7 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(todayTomorrowResponse); err != nil {
 		logger.Logger.Error("failed to encode response data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
