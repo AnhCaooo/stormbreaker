@@ -24,12 +24,25 @@ This command will give you total control of all libraries which are used in this
 go run cmd/main.go
 ```
 
-### Build Docker image locally
-
+### Build Docker image
+#### Step 1
+Build image locally
 ```bash
 # Option 1
-docker build --tag stormbreaker .
+docker build --tag stormbreaker:<number-version> .
 
 # Option 2
-docker build -t stormbreaker .
+docker build -t stormbreaker<number-version> .
+```
+
+#### Step 2
+Tag image
+```bash
+docker tag stormbreaker:<number-version> anhcaoo/stormbreaker:<tagged-version-number> 
+```
+
+#### Step 3
+Push image to Docker hub
+```bash
+docker push anhcaoo/stormbreaker:<tagged-version-number> 
 ```
