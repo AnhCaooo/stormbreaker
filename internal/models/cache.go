@@ -6,34 +6,52 @@ import (
 )
 
 type Cache struct {
-	data map[string]cacheValue
+	Data map[string]CacheValue
 	lock sync.Mutex
 }
 
-type cacheValue struct {
-	value      interface{}
-	expiration time.Time
+type CacheValue struct {
+	Value      interface{}
+	Expiration time.Time
 }
 
-// a function is initialize a cache instance
-func NewCache() *Cache {
-	return &Cache{
-		data: make(map[string]cacheValue),
-	}
-}
-
+// todo: implement to get Finnish hour instead of current location
 // a method is used to add new key-value pair to the cache.
 // It takes in a key, a value, and a duration representing the expiration time of the value.
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
-func (c *Cache) Set(key string, value interface{}, expiration time.Duration) {
+func (c *Cache) SetExpiredAfter(key string, value interface{}, expiration time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	expirationTime := time.Now().Add(expiration)
-	c.data[key] = cacheValue{
-		value:      value,
-		expiration: expirationTime,
+	c.Data[key] = CacheValue{
+		Value:      value,
+		Expiration: expirationTime,
+	}
+}
+
+// a method is used to add new key-value pair to the cache.
+// It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value.
+// It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
+// Finally, it releases the lock.
+func (c *Cache) SetExpiredAt(key string, value interface{}, hourToBeExpired int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// Get current time
+	now := time.Now()
+
+	// Get year, month, and day components
+	year, month, day := now.Date()
+
+	// Get today's date
+	expiredTime := time.Date(year, month, day, hourToBeExpired, 0, 0, 0, now.Location())
+
+	expirationTime := expiredTime
+	c.Data[key] = CacheValue{
+		Value:      value,
+		Expiration: expirationTime,
 	}
 }
 
@@ -46,11 +64,11 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	value, ok := c.data[key]
-	if !ok || time.Now().After(value.expiration) {
-		delete(c.data, key)
+	value, isValid := c.Data[key]
+	if !isValid || time.Now().After(value.Expiration) {
+		delete(c.Data, key)
 		return nil, false
 	}
 
-	return value.value, true
+	return value.Value, true
 }
