@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/AnhCaooo/stormbreaker/internal/api"
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/routes"
@@ -19,6 +20,9 @@ import (
 func main() {
 	// Initialize logger
 	logger.InitLogger()
+
+	// Initialize cache
+	cache.NewCache()
 
 	// Initial new router
 	r := mux.NewRouter()
