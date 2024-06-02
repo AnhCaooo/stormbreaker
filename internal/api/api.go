@@ -64,7 +64,11 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	todayTomorrowResponse := electric.FetchCurrentSpotPrice(w)
+	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
+	if err != nil {
+		logger.Logger.Error("[server error] failed to fetch today and/or tomorrow spot price", zap.Error(err))
+		return
+	}
 
 	// Cache response to improve performance
 	// if tomorrow price is available already, then cache until 23:59

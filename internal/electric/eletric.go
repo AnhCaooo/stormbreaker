@@ -2,6 +2,7 @@ package electric
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
@@ -35,43 +36,38 @@ func FetchSpotPrice(requestParameters models.PriceRequest) (responseData *models
 	return
 }
 
-// fetch and return current spot price. Depending on the time sending request,
-// there could be tomorrow's price come along with today's price.
+// fetch, return current spot price and write the status, result to response.
+// Depending on the time sending request, there could be tomorrow's price come along with today's price.
 // In practice, tomorrow's price would be available around 2pm-4pm everyday
-func FetchCurrentSpotPrice(w http.ResponseWriter) *models.TodayTomorrowPrice {
-	var reqBody, err = helpers.BuildTodayTomorrowAsBodyRequest()
+func FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models.TodayTomorrowPrice, err error) {
+	reqBody, err := helpers.BuildTodayTomorrowAsBodyRequest()
 	if err != nil {
-		logger.Logger.Error("[server error] failed to build request body", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil
+		return nil, fmt.Errorf("[server error] failed to build request body. Error: %s", err.Error())
 	}
 
 	todayTomorrowPrice, errorType, err := FetchSpotPrice(reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
-			logger.Logger.Error("[server error] failed to fetch data", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil
+			return nil, fmt.Errorf("[server error] failed to fetch data. Error: %s", err.Error())
 		}
-		logger.Logger.Error("[request error] failed to fetch data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return nil
+		return nil, fmt.Errorf("[request error] failed to fetch data. Error: %s", err.Error())
 	}
 
-	todayTomorrowResponse, err := helpers.MapToTodayTomorrowResponse(todayTomorrowPrice)
+	todayTomorrowResponse, err = helpers.MapToTodayTomorrowResponse(todayTomorrowPrice)
 	if err != nil {
-		logger.Logger.Error("[server error] failed to map to informative struct data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil
+		return nil, fmt.Errorf("[server error] failed to map to informative struct data. Error: %s", err.Error())
 	}
 
 	if err := json.NewEncoder(w).Encode(todayTomorrowResponse); err != nil {
-		logger.Logger.Error("failed to encode response data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return nil
+		return nil, fmt.Errorf("[server error] failed to encode response data. Error: %s", err.Error())
 	}
 
 	logger.Logger.Info("get today and tomorrow's exchange price successfully")
 
-	return todayTomorrowResponse
+	return
 }
