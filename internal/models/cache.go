@@ -32,7 +32,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 }
 
 // a method is used to add new key-value pair to the cache.
-// It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value (expired at specific hour).
+// It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
