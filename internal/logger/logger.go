@@ -7,6 +7,7 @@ import (
 
 var Logger *zap.Logger
 
+// initialize logger
 func InitLogger() {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder

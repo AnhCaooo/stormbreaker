@@ -7,6 +7,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
+// receives 'requestParameters' struct and return endpoint url
 func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
@@ -52,7 +53,7 @@ func BuildTodayTomorrowAsBodyRequest() (body models.PriceRequest, err error) {
 	return body, nil
 }
 
-// todo: any better ways to optimize this code. Go routine?
+// receives price's response and map it to `TodayTomorrowPrice` 's struct
 func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.TodayTomorrowPrice, err error) {
 	todayPrices, err := getTodayPrices(*data)
 	if err != nil {
