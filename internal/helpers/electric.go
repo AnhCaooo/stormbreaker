@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
@@ -73,14 +72,8 @@ func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.To
 }
 
 func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
-	// Get current time
-	now := time.Now()
-
-	// Get year, month, and day components
-	year, month, day := now.Date()
-
 	// Get today's date
-	today := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
+	today := SetTime(0, 0)
 
 	// Get tomorrow's date by adding one day
 	tomorrow := today.AddDate(0, 0, 1)

@@ -39,27 +39,9 @@ func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// // Get current time
-	// now := time.Now()
-
-	// // Get year, month, and day components
-	// year, month, day := now.Date()
-
-	// // Get today's date
-	// expiredTime := time.Date(year, month, day, hour, 0, 0, 0, now.Location())
-
 	c.Data[key] = CacheValue{
 		Value:      value,
 		Expiration: expiredTime,
-	}
-}
-
-func (c *Cache) SetExpired(key string, value interface{}, duration *time.Duration, expiredTime *time.Time) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if time.Now().After(*expiredTime) {
-
 	}
 }
 
