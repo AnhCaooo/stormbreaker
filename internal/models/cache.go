@@ -35,23 +35,31 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value (expired at specific hour).
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
-func (c *Cache) SetExpiredAtHour(key string, value interface{}, hour int) {
+func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// Get current time
-	now := time.Now()
+	// // Get current time
+	// now := time.Now()
 
-	// Get year, month, and day components
-	year, month, day := now.Date()
+	// // Get year, month, and day components
+	// year, month, day := now.Date()
 
-	// Get today's date
-	expiredTime := time.Date(year, month, day, hour, 0, 0, 0, now.Location())
+	// // Get today's date
+	// expiredTime := time.Date(year, month, day, hour, 0, 0, 0, now.Location())
 
-	expirationTime := expiredTime
 	c.Data[key] = CacheValue{
 		Value:      value,
-		Expiration: expirationTime,
+		Expiration: expiredTime,
+	}
+}
+
+func (c *Cache) SetExpired(key string, value interface{}, duration *time.Duration, expiredTime *time.Time) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if time.Now().After(*expiredTime) {
+
 	}
 }
 

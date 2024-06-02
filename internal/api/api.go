@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
+	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.uber.org/zap"
@@ -49,7 +51,6 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 // Then client needs to show readable information to indicate that data is not available yet.
 func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	cacheKey := "today-tomorrow-exchange-price"
-	expiredAtHour := 14
 	w.Header().Set("Content-Type", "application/json")
 
 	cachePrice, isValid := cache.Cache.Get(cacheKey)
@@ -64,5 +65,16 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	todayTomorrowResponse := electric.FetchCurrentSpotPrice(w)
-	cache.Cache.SetExpiredAtHour(cacheKey, &todayTomorrowResponse, expiredAtHour)
+
+	// Cache response to improve performance
+	// if tomorrow price is available already, then cache until 23:59
+	if todayTomorrowResponse.Tomorrow.Available {
+		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, helpers.SetTime(23, 59))
+		return
+	}
+	// if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
+	expiredTime := helpers.SetTime(14, 0)
+	if time.Now().Before(expiredTime) {
+		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
+	}
 }
