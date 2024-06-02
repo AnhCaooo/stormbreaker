@@ -64,5 +64,5 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	todayTomorrowResponse := electric.FetchCurrentSpotPrice(w)
-	cache.Cache.SetExpiredAt(cacheKey, &todayTomorrowResponse, expiredAtHour)
+	cache.Cache.SetExpiredAtHour(cacheKey, &todayTomorrowResponse, expiredAtHour)
 }
