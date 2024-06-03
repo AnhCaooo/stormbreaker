@@ -2,11 +2,11 @@ package helpers
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
+// receives 'requestParameters' struct and return endpoint url
 func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
@@ -52,7 +52,7 @@ func BuildTodayTomorrowAsBodyRequest() (body models.PriceRequest, err error) {
 	return body, nil
 }
 
-// todo: any better ways to optimize this code. Go routine?
+// receives price's response and map it to `TodayTomorrowPrice` 's struct
 func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.TodayTomorrowPrice, err error) {
 	todayPrices, err := getTodayPrices(*data)
 	if err != nil {
@@ -72,14 +72,8 @@ func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.To
 }
 
 func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
-	// Get current time
-	now := time.Now()
-
-	// Get year, month, and day components
-	year, month, day := now.Date()
-
 	// Get today's date
-	today := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
+	today := SetTime(0, 0)
 
 	// Get tomorrow's date by adding one day
 	tomorrow := today.AddDate(0, 0, 1)

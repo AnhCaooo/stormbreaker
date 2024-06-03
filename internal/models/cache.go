@@ -20,11 +20,11 @@ type CacheValue struct {
 // It takes in a key, a value, and a duration representing the expiration time of the value.
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
-func (c *Cache) SetExpiredAfter(key string, value interface{}, expiration time.Duration) {
+func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duration time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	expirationTime := time.Now().Add(expiration)
+	expirationTime := time.Now().Add(duration)
 	c.Data[key] = CacheValue{
 		Value:      value,
 		Expiration: expirationTime,
@@ -32,26 +32,16 @@ func (c *Cache) SetExpiredAfter(key string, value interface{}, expiration time.D
 }
 
 // a method is used to add new key-value pair to the cache.
-// It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value.
+// It takes in a key, a value, and a time slot (by hour) representing the expiration time of the value
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
-func (c *Cache) SetExpiredAt(key string, value interface{}, hourToBeExpired int) {
+func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// Get current time
-	now := time.Now()
-
-	// Get year, month, and day components
-	year, month, day := now.Date()
-
-	// Get today's date
-	expiredTime := time.Date(year, month, day, hourToBeExpired, 0, 0, 0, now.Location())
-
-	expirationTime := expiredTime
 	c.Data[key] = CacheValue{
 		Value:      value,
-		Expiration: expirationTime,
+		Expiration: expiredTime,
 	}
 }
 
