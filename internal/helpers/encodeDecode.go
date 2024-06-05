@@ -7,7 +7,7 @@ import (
 )
 
 // encode response bodies
-func Encode[T any](w http.ResponseWriter, status int, v T) error {
+func EncodeResponse[T any](w http.ResponseWriter, status int, v T) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
@@ -17,7 +17,15 @@ func Encode[T any](w http.ResponseWriter, status int, v T) error {
 }
 
 // decode the request bodies
-func Decode[T any](r *http.Request) (v T, err error) {
+func DecodeRequest[T any](r *http.Request) (v T, err error) {
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		return v, fmt.Errorf("decode json: %w", err)
+	}
+	return v, nil
+}
+
+// decode the response bodies
+func DecodeResponse[T any](r *http.Response) (v T, err error) {
 	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
 		return v, fmt.Errorf("decode json: %w", err)
 	}
