@@ -1,7 +1,6 @@
 package electric
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -28,11 +27,11 @@ func FetchSpotPrice(requestParameters models.PriceRequest) (responseData *models
 	}
 	defer resp.Body.Close()
 
-	if err := json.NewDecoder(resp.Body).Decode(&responseData); err != nil { // Parse []byte to the go struct pointer
-		logger.Logger.Error("can not unmarshal JSON", zap.Error(err))
+	responseData, err = helpers.DecodeResponse[*models.PriceResponse](resp)
+	if err != nil {
+		logger.Logger.Error("can not decode json", zap.Error(err))
 		return nil, models.SERVER_ERROR, err
 	}
-
 	return
 }
 
@@ -62,12 +61,12 @@ func FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models
 		return nil, fmt.Errorf("[server error] failed to map to informative struct data. Error: %s", err.Error())
 	}
 
-	if err := json.NewEncoder(w).Encode(todayTomorrowResponse); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := helpers.EncodeResponse(w, http.StatusOK, todayTomorrowResponse); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, fmt.Errorf("[server error] failed to encode response data. Error: %s", err.Error())
 	}
 
-	logger.Logger.Info("get today and tomorrow's exchange price successfully")
+	logger.Logger.Info("[from external source] get today and tomorrow's exchange price successfully")
 
 	return
 }

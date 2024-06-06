@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -15,11 +14,9 @@ import (
 
 // Fetch the market spot price of electric in Finland in any times
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
-	var reqBody models.PriceRequest
-
-	err := json.NewDecoder(r.Body).Decode(&reqBody)
+	reqBody, err := helpers.DecodeRequest[models.PriceRequest](r)
 	if err != nil {
-		logger.Logger.Error("failed to decode request body", zap.Error(err))
+		logger.Logger.Error("[request error] failed to decode request body", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -36,10 +33,9 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(externalData); err != nil {
-		logger.Logger.Error("failed to encode response data", zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := helpers.EncodeResponse(w, http.StatusOK, externalData); err != nil {
+		logger.Logger.Error("[server error] failed to encode external response data", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -51,22 +47,22 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 // Then client needs to show readable information to indicate that data is not available yet.
 func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	cacheKey := "today-tomorrow-exchange-price"
-	w.Header().Set("Content-Type", "application/json")
 
 	cachePrice, isValid := cache.Cache.Get(cacheKey)
 	if isValid {
-		if err := json.NewEncoder(w).Encode(cachePrice); err != nil {
+		if err := helpers.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
 			logger.Logger.Error("[server error] failed to encode cache data", zap.Error(err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		logger.Logger.Info("get today and tomorrow's exchange price successfully")
+		logger.Logger.Info("[from cache] get today and tomorrow's exchange price successfully")
 		return
 	}
 
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
-		logger.Logger.Error("[server error] failed to fetch today and/or tomorrow spot price", zap.Error(err))
+		logger.Logger.Error("[server error] failed to fetch today and/or tomorrow spot price from external source", zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
