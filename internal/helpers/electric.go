@@ -37,11 +37,11 @@ func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint st
 	), nil
 }
 
-// get request body for '/market-price/today-tomorrow'
-func BuildTodayTomorrowAsBodyRequest() (body models.PriceRequest, err error) {
+// return as request body with date of today and data of tomorrow.
+// Usage: get request body for '/market-price/today-tomorrow'
+func BuildTodayTomorrowAsBodyRequest() models.PriceRequest {
 	today, tomorrow := getTodayAndTomorrowDateAsString()
-
-	body = models.PriceRequest{
+	return models.PriceRequest{
 		StartDate:         today,
 		EndDate:           tomorrow,
 		Marginal:          0.59, // todo: this field should has default value at the beginning. However, it would be nice to give users have their own customizations and then read from db as it is different between users
@@ -49,7 +49,6 @@ func BuildTodayTomorrowAsBodyRequest() (body models.PriceRequest, err error) {
 		VatIncluded:       1, // todo: this field by default should be 1. However, it would be nice to give users have their own customizations
 		CompareToLastYear: 0,
 	}
-	return body, nil
 }
 
 // receives price's response and map it to `TodayTomorrowPrice` 's struct

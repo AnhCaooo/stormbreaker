@@ -39,11 +39,7 @@ func FetchSpotPrice(requestParameters models.PriceRequest) (responseData *models
 // Depending on the time sending request, there could be tomorrow's price come along with today's price.
 // In practice, tomorrow's price would be available around 2pm-4pm everyday
 func FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models.TodayTomorrowPrice, err error) {
-	reqBody, err := helpers.BuildTodayTomorrowAsBodyRequest()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, fmt.Errorf("[server error] failed to build request body. Error: %s", err.Error())
-	}
+	reqBody := helpers.BuildTodayTomorrowAsBodyRequest()
 
 	todayTomorrowPrice, errorType, err := FetchSpotPrice(reqBody)
 	if err != nil {
