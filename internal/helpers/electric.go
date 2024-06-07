@@ -6,7 +6,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
-// receives 'requestParameters' struct and return endpoint url
+// receives 'requestParameters' struct and return appropriate endpoint url
 func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
@@ -20,7 +20,7 @@ func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint st
 	}
 
 	if !isValidFloat(requestParameters.Marginal) {
-		return "", fmt.Errorf("marginal should have value or equal to 0")
+		return "", fmt.Errorf("marginal should have float value or equal to 0")
 	}
 
 	if !isValidInt(requestParameters.VatIncluded) {
@@ -28,7 +28,7 @@ func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint st
 	}
 
 	if !isValidInt(requestParameters.CompareToLastYear) {
-		return "", fmt.Errorf("CompareToLastYear needs to be value '0' or '1' only")
+		return "", fmt.Errorf("compareToLastYear needs to be value '0' or '1' only")
 	}
 
 	return fmt.Sprintf("%s?starttime=%s&endtime=%s&margin=%f&group=%s&include_vat%d&compare_to_last_year=%d",
