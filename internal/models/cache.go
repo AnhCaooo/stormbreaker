@@ -3,6 +3,9 @@ package models
 import (
 	"sync"
 	"time"
+
+	"github.com/AnhCaooo/stormbreaker/internal/logger"
+	"go.uber.org/zap"
 )
 
 type Cache struct {
@@ -15,7 +18,6 @@ type CacheValue struct {
 	Expiration time.Time
 }
 
-// todo: implement to get Finnish hour instead of current location
 // a method is used to add new key-value pair to the cache.
 // It takes in a key, a value, and a duration representing the expiration time of the value.
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
@@ -36,6 +38,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
+	logger.Logger.Info("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -49,7 +52,7 @@ func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time
 // It first acquires a lock on the mutex to ensure thread safety.
 // Then checks if the cache contains a value for the given key and if that value has not expired.
 // If the value is still valid, it returns the value and a boolean value of `true` to indicate that a valid value was found.
-// If the value is not valid or the cache does not contain a value for the given key, it returns `nil` and a boolean value of `false`.
+// If the value is not valid (means not yet cached), it returns `nil` and a boolean value of `false`.
 func (c *Cache) Get(key string) (interface{}, bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -57,8 +60,12 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	value, isValid := c.Data[key]
 	if !isValid || time.Now().After(value.Expiration) {
 		delete(c.Data, key)
+		logger.Logger.Info("[server] cache was expired or not yet cached", zap.String("cache-key", key))
 		return nil, false
 	}
-
+	logger.Logger.Info("[server] cache living time.",
+		zap.Any("expired-time-utc", value.Expiration),
+		zap.Time("current-time-utc", time.Now().UTC()),
+	)
 	return value.Value, true
 }

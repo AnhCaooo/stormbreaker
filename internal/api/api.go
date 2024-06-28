@@ -24,7 +24,7 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	externalData, errorType, err := electric.FetchSpotPrice(reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
-			logger.Logger.Error("[server error] failed to fetch data", zap.Error(err))
+			logger.Logger.Error("[server] failed to fetch data", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -34,7 +34,7 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := helpers.EncodeResponse(w, http.StatusOK, externalData); err != nil {
-		logger.Logger.Error("[server error] failed to encode external response data", zap.Error(err))
+		logger.Logger.Error("[server] failed to encode external response data", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -51,17 +51,17 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	cachePrice, isValid := cache.Cache.Get(cacheKey)
 	if isValid {
 		if err := helpers.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
-			logger.Logger.Error("[server error] failed to encode cache data", zap.Error(err))
+			logger.Logger.Error("[server] failed to encode cache data", zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		logger.Logger.Info("[from cache] get today and tomorrow's exchange price successfully")
+		logger.Logger.Info("[cache] get today and tomorrow's exchange price successfully")
 		return
 	}
 
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
-		logger.Logger.Error("[server error] failed to fetch today and/or tomorrow spot price from external source", zap.Error(err))
+		logger.Logger.Error("[server] failed to fetch today and/or tomorrow spot price from external source", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -69,11 +69,20 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	// Cache response to improve performance
 	// if tomorrow price is available already, then cache until 23:59
 	if todayTomorrowResponse.Tomorrow.Available {
-		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, helpers.SetTime(23, 59))
+		expiredTime, err := helpers.SetTime(23, 59)
+		if err != nil {
+			logger.Logger.Error("[server] failed to set expired time for caching.", zap.Error(err))
+			return
+		}
+		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
 		return
 	}
 	// if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
-	expiredTime := helpers.SetTime(14, 0)
+	expiredTime, err := helpers.SetTime(14, 00)
+	if err != nil {
+		logger.Logger.Error("[server] failed to set expired time for caching.", zap.Error(err))
+		return
+	}
 	if time.Now().Before(expiredTime) {
 		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
 	}
