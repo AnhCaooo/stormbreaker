@@ -3,7 +3,9 @@ package helpers
 import (
 	"fmt"
 
+	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
+	"go.uber.org/zap"
 )
 
 // receives 'requestParameters' struct and return appropriate endpoint url
@@ -72,7 +74,11 @@ func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.To
 
 func getTodayAndTomorrowDateAsString() (todayDate string, tomorrowDate string) {
 	// Get today's date
-	today := SetTime(0, 0)
+	today, err := SetTime(0, 0)
+	if err != nil {
+		logger.Logger.Error("[server] failed to get today's date.", zap.Error(err))
+		return
+	}
 
 	// Get tomorrow's date by adding one day
 	tomorrow := today.AddDate(0, 0, 1)
