@@ -38,7 +38,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
-	logger.Logger.Info("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
+	logger.Logger.Debug("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -60,10 +60,10 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	value, isValid := c.Data[key]
 	if !isValid || time.Now().After(value.Expiration) {
 		delete(c.Data, key)
-		logger.Logger.Info("[server] cache was expired or not yet cached", zap.String("cache-key", key))
+		logger.Logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
 		return nil, false
 	}
-	logger.Logger.Info("[server] cache living time.",
+	logger.Logger.Debug("[server] cache living time.",
 		zap.Any("expired-time-utc", value.Expiration),
 		zap.Time("current-time-utc", time.Now().UTC()),
 	)
