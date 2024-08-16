@@ -10,11 +10,13 @@ const (
 
 // Represents single electric data at specific time
 type Data struct {
-	OriginalTime string  `json:"orig_time"`
-	Time         string  `json:"time"`
-	Price        float64 `json:"price"`
-	VatFactor    float64 `json:"vat_factor"`
-	IsToday      bool    `json:"isToday"`
+	TimeUTC      string      `json:"time_utc"`
+	OriginalTime string      `json:"orig_time"`
+	Time         string      `json:"time"`
+	Price        float64     `json:"price"`
+	VatFactor    float64     `json:"vat_factor"`
+	IsToday      bool        `json:"isToday"`
+	IncludeVat   interface{} `json:"includeVat"` // IncludeVat is legacy interface which "false" means no VAT included and string "1" is included
 }
 
 // Represents a series of electric data with the name of unit (ex: c/kwh)
