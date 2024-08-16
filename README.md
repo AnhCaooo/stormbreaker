@@ -26,7 +26,7 @@ go run cmd/main.go
 
 ### Build Docker image
 
-**Note**: in case you are planning to push your docker image, you first need to login Docker first
+**Note**: in case you are planning to push your docker image, you first need to log in Docker (only in case you have not logged in)
 
 ```bash
 docker login -u "<docker_username>" -p "<docker_password>" docker.io
