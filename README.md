@@ -25,6 +25,13 @@ go run cmd/main.go
 ```
 
 ### Build Docker image
+
+**Note**: in case you are planning to push your docker image, you first need to login Docker first
+
+```bash
+docker login -u "<docker_username>" -p "<docker_password>" docker.io
+```
+
 #### Step 1
 Build image locally
 ```bash
