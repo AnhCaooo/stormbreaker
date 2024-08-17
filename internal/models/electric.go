@@ -16,7 +16,7 @@ type Data struct {
 	Price        float64 `json:"price"`
 	VatFactor    float64 `json:"vat_factor"`
 	IsToday      bool    `json:"isToday"`
-	IncludeVat   int32   `json:"includeVat"` // IncludeVat is legacy interface which "0" means no VAT included and string "1" is included
+	IncludeVat   string  `json:"includeVat"` // IncludeVat is legacy property that return string value and value "0" means no VAT included and string "1" is included
 }
 
 // Represents a series of electric data with the name of unit (ex: c/kwh)

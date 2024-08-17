@@ -32,7 +32,7 @@ func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint st
 		return "", fmt.Errorf("compareToLastYear needs to be value '0' or '1' only")
 	}
 
-	return fmt.Sprintf("%s?starttime=%s&endtime=%s&margin=%f&group=%s&include_vat%d&compare_to_last_year=%d",
+	return fmt.Sprintf("%s?starttime=%s&endtime=%s&margin=%f&group=%s&include_vat=%d&compare_to_last_year=%d",
 		url, requestParameters.StartDate, requestParameters.EndDate, requestParameters.Marginal,
 		requestParameters.Group, requestParameters.VatIncluded, requestParameters.CompareToLastYear,
 	), nil
