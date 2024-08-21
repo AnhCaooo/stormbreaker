@@ -71,3 +71,16 @@ components:
           example: 0
     MarketPriceRes:
       type: object
+      properties:
+        data:
+          type: object
+          properties:
+            group:
+              type: string
+              description: represents 'hour', 'day', 'week', 'month', 'year'
+              example: "hour"
+              enum: ['hour', 'day', 'week', 'month', 'year']
+            series:
+              type: array
+              description: series data of electric price in targeting group
+              example: []
