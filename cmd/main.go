@@ -33,7 +33,7 @@ func main() {
 	r.NotFoundHandler = http.HandlerFunc(api.NotFoundHandler)
 
 	// Middleware
-	r.Use(middleware.LoggingMiddleware)
+	r.Use(middleware.Logger)
 
 	// Start server
 	logger.Logger.Info("Server started on :5001")

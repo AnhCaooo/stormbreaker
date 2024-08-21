@@ -1,0 +1,86 @@
+openapi: 3.0.0
+info:
+  title: Stormbreaker API
+  description: API for retrieving information about electric price in Finland
+  version: 1.0.0
+servers:
+  - url: http://localhost:5001
+    description: Local server
+paths:
+  /v1/market-price:
+    post:
+      summary: Get electric market price information
+      description: Returns specific electric price by specifying the request body
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarketPriceReq'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPriceRes'
+        '400':
+          description: Something went wrong in the client side. Maybe request body contains some information which is incorrect
+          content: {}
+        '500':
+          description: Fail to fetch data. There is something wrong in the server side. Maybe fetching external encounters some problems. 
+          content: {}
+components:
+  schemas:
+    MarketPriceReq:
+      type: object
+      required:
+        - starttime
+        - endtime
+        - margin
+        - group 
+        - include_vat
+        - compare_to_last_year
+      properties:
+        starttime:
+          type: string
+          description: start time has to be in this format "YYYY-MM-DD"
+          example: "2024-08-21"
+        endtime:
+          type: string
+          description: end time has to be in this format "YYYY-MM-DD"
+          example: "2024-08-21"
+        margin:
+          type: number
+          format: float64
+          description: Marginal is not allowed to be empty, it is ok to equal to "0"
+        group:
+          type: string
+          description: represents 'hour', 'day', 'week', 'month', 'year'
+          example: "hour"
+          enum: ["hour", 'day', 'week', 'month', 'year']
+        include_vat:
+          type: integer
+          format: int32
+          description: this is legacy property that return string value and value "0" means no VAT included and string "1" is included
+          enum: [0, 1]
+          example: 1
+        compare_to_last_year:
+          type: integer
+          format: int32
+          enum: [0, 1]
+          example: 0
+    MarketPriceRes:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            group:
+              type: string
+              description: represents 'hour', 'day', 'week', 'month', 'year'
+              example: "hour"
+              enum: ['hour', 'day', 'week', 'month', 'year']
+            series:
+              type: array
+              description: series data of electric price in targeting group
+              example: []

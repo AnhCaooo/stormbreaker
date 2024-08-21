@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func LoggingMiddleware(next http.Handler) http.Handler {
+func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Logger.Info("request received", zap.String("method", r.Method), zap.String("endpoint", r.URL.Path))
 		next.ServeHTTP(w, r)
