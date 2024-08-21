@@ -44,9 +44,11 @@ components:
         starttime:
           type: string
           description: start time has to be in this format "YYYY-MM-DD"
+          example: "2024-08-21"
         endtime:
           type: string
           description: end time has to be in this format "YYYY-MM-DD"
+          example: "2024-08-21"
         margin:
           type: number
           format: float64
@@ -54,12 +56,18 @@ components:
         group:
           type: string
           description: represents 'hour', 'day', 'week', 'month', 'year'
+          example: "hour"
+          enum: ["hour", 'day', 'week', 'month', 'year']
         include_vat:
           type: integer
           format: int32
           description: this is legacy property that return string value and value "0" means no VAT included and string "1" is included
+          enum: [0, 1]
+          example: 1
         compare_to_last_year:
           type: integer
           format: int32
+          enum: [0, 1]
+          example: 0
     MarketPriceRes:
       type: object
