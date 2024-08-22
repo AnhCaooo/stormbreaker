@@ -15,23 +15,31 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MarketPriceReq'
+              $ref: '#/components/schemas/MarketPriceReqV1'
       responses:
         '200':
           description: Successful response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MarketPriceRes'
+                $ref: '#/components/schemas/MarketPriceResV1'
         '400':
-          description: Something went wrong in the client side. Maybe request body contains some information which is incorrect
-          content: {}
+          description: Bad request. Error from client side. Maybe request body contains some information which is incorrect
+          content: 
+            application/json:
+              schema:
+                type: string
+                example: 'start date cannot after end date'
         '500':
-          description: Fail to fetch data. There is something wrong in the server side. Maybe fetching external encounters some problems. 
-          content: {}
+          description: Unexpected error from server side. Maybe fetching external encounters some problems. 
+          content: 
+            application/json:
+              schema:
+                type: string
+                example: failed to fetch data
 components:
   schemas:
-    MarketPriceReq:
+    MarketPriceReqV1:
       type: object
       required:
         - starttime
@@ -69,7 +77,7 @@ components:
           format: int32
           enum: [0, 1]
           example: 0
-    MarketPriceRes:
+    MarketPriceResV1:
       type: object
       properties:
         data:
@@ -82,5 +90,40 @@ components:
               enum: ['hour', 'day', 'week', 'month', 'year']
             series:
               type: array
-              description: series data of electric price in targeting group
-              example: []
+              description: unit and series data of electric price in targeting group
+              items: 
+                type: object
+                properties:
+                  name: 
+                    type: string 
+                    description: unit of electric price
+                    example: 'c/kWh'
+                  data: 
+                    type: array
+                    description: series data of electric price in targeting group
+                    items: 
+                      type: object 
+                      properties:
+                        time_utc: 
+                          type: string
+                          example: '2024-08-21 21:00:00'
+                        orig_time:
+                          type: string
+                          example: '2024-08-21 00:00:00'
+                        time: 
+                          type: string
+                          example: '2024-08-21 00:00:00'
+                        price: 
+                          type: number
+                          format: float64
+                        vat_factor: 
+                          type: number
+                          format: float64
+                        isToday:
+                          type: boolean
+                          description: indicate if the searching date is today or not
+                          example: false
+                        includeVat: 
+                          type: integer
+                          enum: [0, 1]
+                          example: 0
