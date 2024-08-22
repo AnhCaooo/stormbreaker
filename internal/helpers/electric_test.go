@@ -7,7 +7,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
-func TestFormatRequestParameters(t *testing.T) {
+func TestFormatMarketPricePostReqParameters(t *testing.T) {
 	tests := []struct {
 		name           string
 		givenParameter models.PriceRequest
@@ -82,7 +82,7 @@ func TestFormatRequestParameters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, err := FormatRequestParameters(test.givenParameter)
+		result, err := FormatMarketPricePostReqParameters(test.givenParameter)
 		if err != nil && err.Error() != test.expectedErr {
 			t.Errorf("got %q, wanted %q", err.Error(), test.expectedErr)
 		}
