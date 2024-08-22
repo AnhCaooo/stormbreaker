@@ -4,15 +4,14 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AnhCaooo/stormbreaker/internal/api"
+	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
+	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
+	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
-	"github.com/AnhCaooo/stormbreaker/internal/middleware"
-	"github.com/AnhCaooo/stormbreaker/internal/routes"
 	"github.com/gorilla/mux"
 )
 
-// todo: api docs
 // todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
 // and update the value when tomorrow price is available. Maybe have a service
 // to listen and notify when the price is available. New service will also benefit for
@@ -29,8 +28,8 @@ func main() {
 	for _, endpoint := range routes.Endpoints {
 		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
 	}
-	r.MethodNotAllowedHandler = http.HandlerFunc(api.NotAllowedHandler)
-	r.NotFoundHandler = http.HandlerFunc(api.NotFoundHandler)
+	r.MethodNotAllowedHandler = http.HandlerFunc(handlers.NotAllowed)
+	r.NotFoundHandler = http.HandlerFunc(handlers.NotFound)
 
 	// Middleware
 	r.Use(middleware.Logger)

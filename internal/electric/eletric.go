@@ -13,7 +13,7 @@ import (
 // Receive request body as struct, beautify it and return as URL string.
 // Then call this URL in GET request and decode it
 func FetchSpotPrice(requestParameters models.PriceRequest) (responseData *models.PriceResponse, errorType string, err error) {
-	externalUrl, err := helpers.FormatRequestParameters(requestParameters)
+	externalUrl, err := helpers.FormatMarketPricePostReqParameters(requestParameters)
 	if err != nil {
 		logger.Logger.Error("failed to format url", zap.Error(err))
 		return nil, models.CLIENT_ERROR, err

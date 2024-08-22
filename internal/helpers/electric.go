@@ -8,7 +8,7 @@ import (
 )
 
 // receives 'requestParameters' struct and return appropriate endpoint url
-func FormatRequestParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
+func FormatMarketPricePostReqParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
 	isValidDateRange, err := isValidDateRange(requestParameters.StartDate, requestParameters.EndDate)
