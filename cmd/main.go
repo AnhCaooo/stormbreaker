@@ -4,11 +4,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/AnhCaooo/stormbreaker/internal/api"
+	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
+	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
+	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
-	"github.com/AnhCaooo/stormbreaker/internal/middleware"
-	"github.com/AnhCaooo/stormbreaker/internal/routes"
 	"github.com/gorilla/mux"
 )
 
@@ -29,8 +29,8 @@ func main() {
 	for _, endpoint := range routes.Endpoints {
 		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
 	}
-	r.MethodNotAllowedHandler = http.HandlerFunc(api.NotAllowedHandler)
-	r.NotFoundHandler = http.HandlerFunc(api.NotFoundHandler)
+	r.MethodNotAllowedHandler = http.HandlerFunc(handlers.NotAllowedHandler)
+	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
 
 	// Middleware
 	r.Use(middleware.Logger)
