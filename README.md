@@ -42,7 +42,7 @@ docker build --tag stormbreaker:<number-version> .
 docker build -t stormbreaker<number-version> .
 
 # Option 3 (recommended)
-# this command by default with build image with tag version 'latest'. 
+# this command by default will build image with tag version 'latest'. 
 # this is an enhancement when before the image is built, all unit tests will be executed
 make docker 
 ```
