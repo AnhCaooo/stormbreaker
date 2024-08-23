@@ -24,7 +24,7 @@ func TestFormatMarketPricePostReqParameters(t *testing.T) {
 				VatIncluded:       1,
 				CompareToLastYear: 0,
 			},
-			expectedUrl: "https://oomi.fi/wp-json/spot-price/v1/get?starttime=2024-06-05&endtime=2024-06-05&margin=0.590000&group=hour&include_vat1&compare_to_last_year=0",
+			expectedUrl: "https://oomi.fi/wp-json/spot-price/v1/get?starttime=2024-06-05&endtime=2024-06-05&margin=0.590000&group=hour&include_vat=1&compare_to_last_year=0",
 			expectedErr: "",
 		},
 		{
