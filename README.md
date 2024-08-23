@@ -35,11 +35,16 @@ docker login -u "<docker_username>" -p "<docker_password>" docker.io
 #### Step 1
 Build image locally
 ```bash
-# Option 1
+# Option 1 (not recommended)
 docker build --tag stormbreaker:<number-version> .
 
-# Option 2
+# Option 2 (not recommended)
 docker build -t stormbreaker<number-version> .
+
+# Option 3 (recommended)
+# this command by default with build image with tag version 'latest'. 
+# this is an enhancement when before the image is built, all unit tests will be executed
+make docker 
 ```
 
 #### Step 2
