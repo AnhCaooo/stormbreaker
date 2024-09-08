@@ -39,7 +39,7 @@ Build image locally
 docker build --tag stormbreaker:<number-version> .
 
 # Option 2 (not recommended)
-docker build -t stormbreaker<number-version> .
+docker build -t stormbreaker:<number-version> .
 
 # Option 3 (recommended)
 # this command by default will build image with tag version 'latest'. 
