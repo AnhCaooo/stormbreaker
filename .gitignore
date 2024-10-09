@@ -1,2 +1,5 @@
 # Dependencies directory
 /vendor/
+
+# Configuration files
+/internal/config/config.yml
