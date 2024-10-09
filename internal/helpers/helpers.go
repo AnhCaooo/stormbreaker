@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 // encode response bodies
@@ -32,4 +33,13 @@ func DecodeResponse[T any](r *http.Response) (v T, err error) {
 		return v, fmt.Errorf("decode json: %w", err)
 	}
 	return v, nil
+}
+
+// get current directory (from root to this repo only)
+func GetCurrentDir() (dir string, err error) {
+	dir, err = os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %s", err.Error())
+	}
+	return
 }

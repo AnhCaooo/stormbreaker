@@ -10,13 +10,13 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
+	"github.com/AnhCaooo/stormbreaker/internal/config"
+	title "github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
-
-var uri string = "mongodb://<dummy_user>:<dummy_pass>@localhost:27017/?timeoutMS=5000"
 
 // todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
 // and update the value when tomorrow price is available. Maybe have a service
@@ -28,13 +28,20 @@ func main() {
 	// Initialize logger
 	logger.InitLogger()
 
+	// Read configuration file
+	err := config.ReadFile(&config.Config)
+	if err != nil {
+		logger.Logger.Error(title.Server, zap.Error(err))
+		os.Exit(1)
+	}
+
 	// Initialize cache
 	cache.NewCache()
 
 	// Initialize database connection
-	mongo, err := db.Init(ctx, uri)
+	mongo, err := db.Init(ctx, config.Config.Database)
 	if err != nil {
-		logger.Logger.Error("[server] failed to initialize database connection.", zap.Error(err))
+		logger.Logger.Error(title.Server, zap.Error(err))
 		os.Exit(1)
 	}
 	defer mongo.Disconnect(ctx)
