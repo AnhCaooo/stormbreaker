@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -58,6 +59,6 @@ func main() {
 	r.Use(middleware.Logger)
 
 	// Start server
-	logger.Logger.Info("Server started on :5001")
-	log.Fatal(http.ListenAndServe(":5001", r))
+	logger.Logger.Info("Server started on", zap.String("port", config.Config.Server.Port))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", config.Config.Server.Port), r))
 }
