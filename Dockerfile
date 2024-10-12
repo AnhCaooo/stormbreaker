@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:alpine
+FROM golang:alpine
 
 # Set destination inside the container
 WORKDIR /app
