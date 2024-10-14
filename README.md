@@ -45,8 +45,9 @@ make docker
 ```bash
 docker run --name <image-name> -d <container-name>:<tagged-image-version>
 ```
-
+Terms explanation:
 `--name`: specify the name of image while running container
+
 `-d`: detached mode
 
 **Notes**: if you are running several containers in same machine, in order to make images can accessible between each other. You can consider to use Docker Network 
