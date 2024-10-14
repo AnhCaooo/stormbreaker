@@ -1,0 +1,14 @@
+# Server configurations
+server:
+  host: "localhost"
+  port: <port_number>
+
+# Database credentials
+database:
+  name: "database" # Example: mongodb
+  user: "username" 
+  pass: "password"
+  host: "host" # localhost, or container name if you are running database as container
+  port: "default_port" # port of container database
+  database: "name" # name of database 
+  collection: "collectiom_name" 
