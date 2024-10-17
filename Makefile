@@ -1,7 +1,7 @@
 # AnhCao 2024
+DOCKER_USERNAME = anhcaoo
+DOCKER_IMAGE = stormbreaker
 TAGGED_VERSION = 1.0.0
-DOCKER_USERNAME = ${{ secrets.DOCKER_USERNAME }}
-DOCKER_IMAGE = ${{ secrets.DOCKER_IMAGE }} 
 DOCKER_CONTAINER = ${DOCKER_IMAGE}:${TAGGED_VERSION} 
 
 .PHONY: build tag push test docker
