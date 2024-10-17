@@ -17,3 +17,5 @@ push:
 
 test: 
 	go test ./...
+
+docker: test build
