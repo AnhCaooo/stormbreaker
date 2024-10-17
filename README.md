@@ -69,11 +69,11 @@ docker login -u "<docker_username>" -p "<docker_password>" docker.io
 #### Step 1
 Tag image
 ```bash
-docker tag <image-name>:<number-version> anhcaoo/<conatiner-name>:<tagged-version-number> 
+docker tag <image-name>:<number-version> <docker_username>/<image-name>:<tagged-version-number> 
 ```
 
 #### Step 2
 Push image to Docker hub
 ```bash
-docker push anhcaoo/<image-name>:<tagged-version-number> 
+docker push <docker_username>/<image-name>:<tagged-version-number> 
 ```
