@@ -6,7 +6,8 @@ name: Push to master branch workflow
 
 on:
   push:
-    branches: [$default-branch]
+    branches: 
+      - master
 
 jobs:
   build:
