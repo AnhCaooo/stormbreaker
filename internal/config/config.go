@@ -20,8 +20,14 @@ func ReadFile(cfg *models.Config) error {
 	if err != nil {
 		return err
 	}
-	configPath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.DecryptedConfigFile)
-	f, err := os.Open(configPath)
+	encryptedConfigFilePath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.EncryptedConfigFile)
+	decryptedConfigFilePath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.DecryptedConfigFile)
+
+	if err = helpers.DecryptFile(encryptedConfigFilePath, decryptedConfigFilePath); err != nil {
+		return err
+	}
+
+	f, err := os.Open(decryptedConfigFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open config.yml: %s", err.Error())
 	}

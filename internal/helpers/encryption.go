@@ -24,14 +24,20 @@ func readEncryptionKey() ([]byte, error) {
 		return key, nil
 	}
 
-	key, err := os.ReadFile("config/key.txt")
+	currentDir, err := GetCurrentDir()
+	if err != nil {
+		return nil, err
+	}
+	keyFilePath := fmt.Sprintf("%s/internal/config/key.txt", currentDir)
+
+	key, err = os.ReadFile(keyFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err.Error())
 	}
 	return key, nil
 }
 
-// Receives 2 paths which are non-encrypted config file and desired encryption config file.
+// Receives 2 paths (inputFile, outputFile) which are non-encrypted config file and encrypted config file.
 // First, read non-encrypted data from given file path. Then do encrypt the data and write to desired file path
 func EncryptFile(decryptedFilePath, encryptedFilePath string) error {
 	// Reading file
@@ -85,7 +91,7 @@ func encryptAES(key []byte, plainText []byte) ([]byte, error) {
 	return cipherText, nil
 }
 
-// Receives 2 paths which are encrypted config file and desired non-encryption config file.
+// Receives 2 paths (inputFile, outputFile) which are encrypted config file and non-encrypted config file.
 // First, read encrypted data from given file path. Then do decrypt the data and write to desired file path
 func DecryptFile(encryptedFilePath, decryptedFilePath string) error {
 	// Reading encrypted file
