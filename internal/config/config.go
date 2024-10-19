@@ -14,7 +14,7 @@ import (
 
 var Config models.Config
 
-// load the configuration from the decrypted yaml config file
+// load the configuration from the encrypted yaml config file
 func ReadFile(cfg *models.Config) error {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
