@@ -3,3 +3,5 @@
 
 # Configuration files
 /internal/config/config.yml
+/internal/config/config.dec.yml
+/internal/config/key.txt

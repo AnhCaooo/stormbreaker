@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
+	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
@@ -23,7 +24,7 @@ func Ping(w http.ResponseWriter, r *http.Request) {
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := helpers.DecodeRequest[models.PriceRequest](r)
 	if err != nil {
-		logger.Logger.Error("[request error] failed to decode request body", zap.Error(err))
+		logger.Logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -31,17 +32,20 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	externalData, errorType, err := electric.FetchSpotPrice(reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
-			logger.Logger.Error("[server] failed to fetch data", zap.Error(err))
+			logger.Logger.Error(constants.Server, zap.Error(err))
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		logger.Logger.Error("[request error] failed to fetch data", zap.Error(err))
+		logger.Logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := helpers.EncodeResponse(w, http.StatusOK, externalData); err != nil {
-		logger.Logger.Error("[server] failed to encode external response data", zap.Error(err))
+		logger.Logger.Error(
+			fmt.Sprintf("%s failed to encode data from external source", constants.Server),
+			zap.Error(err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -58,7 +62,10 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	cachePrice, isValid := cache.Cache.Get(cacheKey)
 	if isValid {
 		if err := helpers.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
-			logger.Logger.Error("[server] failed to encode cache data", zap.Error(err))
+			logger.Logger.Error(
+				fmt.Sprintf("%s failed to encode cache data", constants.Server),
+				zap.Error(err),
+			)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -68,7 +75,10 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
-		logger.Logger.Error("[server] failed to fetch today and/or tomorrow spot price from external source", zap.Error(err))
+		logger.Logger.Error(
+			fmt.Sprintf("%s failed to fetch today and/or tomorrow spot price from external source", constants.Server),
+			zap.Error(err),
+		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -78,7 +88,10 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	if todayTomorrowResponse.Tomorrow.Available {
 		expiredTime, err := helpers.SetTime(23, 59)
 		if err != nil {
-			logger.Logger.Error("[server] failed to set expired time for caching.", zap.Error(err))
+			logger.Logger.Error(
+				fmt.Sprintf("%s failed to set expired time for caching", constants.Server),
+				zap.Error(err),
+			)
 			return
 		}
 		cache.Cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
@@ -87,7 +100,10 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	// if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
 	expiredTime, err := helpers.SetTime(14, 00)
 	if err != nil {
-		logger.Logger.Error("[server] failed to set expired time for caching.", zap.Error(err))
+		logger.Logger.Error(
+			fmt.Sprintf("%s failed to set expired time for caching", constants.Server),
+			zap.Error(err),
+		)
 		return
 	}
 	if time.Now().Before(expiredTime) {
