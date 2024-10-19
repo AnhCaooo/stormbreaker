@@ -29,7 +29,7 @@ jobs:
       - name: Generate encryption key
         id: generate-encryption-key
         run: |
-          echo "ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
+          echo "${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
 
       - name: Build Docker Image
         id: test-and-build-docker-image

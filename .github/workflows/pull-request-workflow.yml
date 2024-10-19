@@ -1,25 +1,67 @@
+# # AnhCao 2024
+
+# name: Pull request workflow for status 'open'
+
+# on:
+#   pull_request:
+#     types: [opened]
+
+# jobs:
+#   build:
+#     name: verify on PR
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       - name: Run unit tests
+#         id: unit-tests-execution
+#         run: make test
+
 # AnhCao 2024
 
-name: Pull request workflow for status 'open'
+name: Push to master branch workflow
 
 on:
-  pull_request:
-    types: [opened]
-
+  push:
+    branches: 
+      - master
+  
 jobs:
   build:
-    name: verify on PR
+    name: build, tag and push Docker image
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx 
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Docker Hub
+        id: docker-hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Generate encryption key
         id: generate-encryption-key
         run: |
-          pwd 
-          ls -la
-          echo "ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
-          cat internal/config/key.txt
+          echo "${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
+
+      - name: Build Docker Image
+        id: test-and-build-docker-image
+        run: make docker
+
+      - name: Tag Docker Image
+        id: tag-docker-image 
+        run: make tag 
+
+      - name: Push Docker Image to Docker Hub
+        id: push-docker-image
+        run: make push
+
 
