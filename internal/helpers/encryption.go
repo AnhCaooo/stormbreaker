@@ -9,6 +9,9 @@ import (
 	"io"
 	"log"
 	"os"
+
+	"github.com/AnhCaooo/stormbreaker/internal/logger"
+	"go.uber.org/zap"
 )
 
 // Read encryption key from config folder
@@ -23,6 +26,7 @@ func readEncryptionKey() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err.Error())
 	}
+	logger.Logger.Info("secrets", zap.String("key", string(key)))
 	return key, nil
 }
 
