@@ -7,19 +7,20 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
 var Config models.Config
 
-// load the configuration from the yaml config file
+// load the configuration from the decrypted yaml config file
 func ReadFile(cfg *models.Config) error {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return err
 	}
-	configPath := fmt.Sprintf("%s/internal/config/config.yml", currentDir)
+	configPath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.DecryptedConfigFile)
 	f, err := os.Open(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to open config.yml: %s", err.Error())
