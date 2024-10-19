@@ -6,7 +6,7 @@ on:
   push:
     branches: 
       - master
-
+  
 jobs:
   build:
     name: build, tag and push Docker image
@@ -25,6 +25,11 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Generate encryption key
+        id: generate-encryption-key
+        run: |
+          echo "ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
 
       - name: Build Docker Image
         id: test-and-build-docker-image

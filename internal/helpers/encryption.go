@@ -11,26 +11,15 @@ import (
 	"os"
 )
 
-// Read encryption key from config file if it is local development.
-// Otherwise, read from Github Secrets
+// Read encryption key from config folder
 func readEncryptionKey() ([]byte, error) {
-	var key []byte
-	if os.Getenv("GITHUB_ACTIONS") == "true" {
-		githubSecretsKey := os.Getenv("ENCRYPTION_KEY")
-		if len(key) == 0 {
-			return nil, fmt.Errorf("no encryption key found from environment variable")
-		}
-		key = []byte(githubSecretsKey)
-		return key, nil
-	}
-
 	currentDir, err := GetCurrentDir()
 	if err != nil {
 		return nil, err
 	}
 	keyFilePath := fmt.Sprintf("%s/internal/config/key.txt", currentDir)
 
-	key, err = os.ReadFile(keyFilePath)
+	key, err := os.ReadFile(keyFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err.Error())
 	}
