@@ -111,7 +111,7 @@ func DecryptFile(encryptedFilePath, decryptedFilePath string) error {
 // AES-GCM decryption
 func decryptAES(key []byte, cipherText []byte) ([]byte, error) {
 	// Creating block of algorithm
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(trimSpaceForByte(key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block of algorithm: %s", err.Error())
 	}
