@@ -114,8 +114,8 @@ func DecryptFile(encryptedFilePath, decryptedFilePath string) error {
 // AES-GCM decryption
 func decryptAES(key []byte, cipherText []byte) ([]byte, error) {
 	// Creating block of algorithm
-	logger.Logger.Info("key encryption", zap.String("key", string(key)))
-	block, err := aes.NewCipher(key)
+	logger.Logger.Info("key encryption", zap.String("key", string(trimSpaceForByte(key))))
+	block, err := aes.NewCipher(trimSpaceForByte(key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block of algorithm: %s", err.Error())
 	}
