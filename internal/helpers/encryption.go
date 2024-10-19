@@ -7,11 +7,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 	"os"
-
-	"github.com/AnhCaooo/stormbreaker/internal/logger"
-	"go.uber.org/zap"
 )
 
 // Read encryption key from config folder
@@ -26,7 +22,6 @@ func readEncryptionKey() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %s", err.Error())
 	}
-	logger.Logger.Info("secrets", zap.String("key", string(key)))
 	return key, nil
 }
 
@@ -118,7 +113,7 @@ func decryptAES(key []byte, cipherText []byte) ([]byte, error) {
 	// Creating block of algorithm
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Fatalf("cipher err: %v", err.Error())
+		return nil, fmt.Errorf("failed to create block of algorithm: %s", err.Error())
 	}
 
 	// Creating GCM mode
