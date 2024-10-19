@@ -31,5 +31,5 @@ func Init(ctx context.Context, cfg models.Database) (*mongo.Client, error) {
 }
 
 func getURI(cfg models.Database) string {
-	return fmt.Sprintf("%s://%s:%s@%s:%s/?timeoutMS=5000", cfg.Name, cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
 }
