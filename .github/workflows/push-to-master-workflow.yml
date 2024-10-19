@@ -11,6 +11,7 @@ on:
 
 jobs:
   build:
+    name: build, tag and push Docker image
     runs-on: ubuntu-latest
 
     steps:
