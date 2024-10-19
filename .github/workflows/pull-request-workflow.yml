@@ -1,0 +1,25 @@
+# AnhCao 2024
+
+name: Pull request workflow for status 'open'
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  build:
+    name: verify on PR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate encryption key
+        id: generate-encryption-key
+        run: |
+          pwd 
+          ls -la
+          echo "ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}" > internal/config/key.txt
+          cat internal/config/key.txt
+
