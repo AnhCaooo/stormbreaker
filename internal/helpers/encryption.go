@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/AnhCaooo/stormbreaker/internal/logger"
+	"go.uber.org/zap"
 )
 
 // Read encryption key from config folder
@@ -111,6 +114,7 @@ func DecryptFile(encryptedFilePath, decryptedFilePath string) error {
 // AES-GCM decryption
 func decryptAES(key []byte, cipherText []byte) ([]byte, error) {
 	// Creating block of algorithm
+	logger.Logger.Info("key encryption", zap.String("key", string(key)))
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create block of algorithm: %s", err.Error())
