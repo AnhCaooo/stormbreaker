@@ -4,7 +4,6 @@ package helpers
 import (
 	"fmt"
 	"math"
-	"strings"
 	"time"
 )
 
@@ -59,11 +58,4 @@ func isValidInt(value int32) bool {
 		return false
 	}
 	return true
-}
-
-func trimSpaceForByte(value []byte) []byte {
-	// convert to string
-	strVal := string(value)
-	trimmedStrVal := strings.TrimSpace(strVal)
-	return []byte(trimmedStrVal)
 }

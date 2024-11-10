@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
@@ -28,7 +29,7 @@ func FetchSpotPrice(requestParameters models.PriceRequest) (responseData *models
 	}
 	defer resp.Body.Close()
 
-	responseData, err = helpers.DecodeResponse[*models.PriceResponse](resp)
+	responseData, err = encode.DecodeResponse[*models.PriceResponse](resp)
 	if err != nil {
 		logger.Logger.Error("can not decode json", zap.Error(err))
 		return nil, models.SERVER_ERROR, err
@@ -57,7 +58,7 @@ func FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models
 		return nil, fmt.Errorf("[server] failed to map to informative struct data. Error: %s", err.Error())
 	}
 
-	if err := helpers.EncodeResponse(w, http.StatusOK, todayTomorrowResponse); err != nil {
+	if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowResponse); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, fmt.Errorf("[server] failed to encode response data. Error: %s", err.Error())
 	}
