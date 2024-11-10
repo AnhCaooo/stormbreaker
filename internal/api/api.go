@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
@@ -22,7 +23,7 @@ func Ping(w http.ResponseWriter, r *http.Request) {
 
 // Fetch the market spot price of electric in Finland in any times
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := helpers.DecodeRequest[models.PriceRequest](r)
+	reqBody, err := encode.DecodeRequest[models.PriceRequest](r)
 	if err != nil {
 		logger.Logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -41,7 +42,7 @@ func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := helpers.EncodeResponse(w, http.StatusOK, externalData); err != nil {
+	if err := encode.EncodeResponse(w, http.StatusOK, externalData); err != nil {
 		logger.Logger.Error(
 			fmt.Sprintf("%s failed to encode data from external source", constants.Server),
 			zap.Error(err),
@@ -61,7 +62,7 @@ func GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 
 	cachePrice, isValid := cache.Cache.Get(cacheKey)
 	if isValid {
-		if err := helpers.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
+		if err := encode.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
 			logger.Logger.Error(
 				fmt.Sprintf("%s failed to encode cache data", constants.Server),
 				zap.Error(err),
