@@ -7,12 +7,15 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/AnhCaooo/go-goods/crypto"
+	"github.com/AnhCaooo/go-goods/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
-	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
 var Config models.Config
+
+const configPath string = "/internal/config/"
 
 // load the configuration from the encrypted yaml config file
 func ReadFile(cfg *models.Config) error {
@@ -20,10 +23,15 @@ func ReadFile(cfg *models.Config) error {
 	if err != nil {
 		return err
 	}
-	encryptedConfigFilePath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.EncryptedConfigFile)
-	decryptedConfigFilePath := fmt.Sprintf("%s/internal/config/%s", currentDir, constants.DecryptedConfigFile)
+	keyFilePath := currentDir + configPath + constants.CryptoKeyFile
+	key, err := crypto.ReadEncryptionKey(keyFilePath)
+	if err != nil {
+		return err
+	}
 
-	if err = helpers.DecryptFile(encryptedConfigFilePath, decryptedConfigFilePath); err != nil {
+	encryptedConfigFilePath := currentDir + configPath + constants.EncryptedConfigFile
+	decryptedConfigFilePath := currentDir + configPath + constants.DecryptedConfigFile
+	if err = crypto.DecryptFile(key, encryptedConfigFilePath, decryptedConfigFilePath); err != nil {
 		return err
 	}
 

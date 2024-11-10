@@ -7,4 +7,5 @@ const (
 	ConfigFile          string = "config.yml"
 	EncryptedConfigFile string = "config.enc.yml"
 	DecryptedConfigFile string = "config.dec.yml"
+	CryptoKeyFile       string = "key.txt"
 )
