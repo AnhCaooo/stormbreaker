@@ -1,3 +1,5 @@
+github.com/AnhCaooo/go-goods v0.0.0-20241108181317-288c389b2b98 h1:+2W6oOo/g4aIwL+ZxCu+lpV+NS1efdbwDXOCtGq9514=
+github.com/AnhCaooo/go-goods v0.0.0-20241108181317-288c389b2b98/go.mod h1:o1SIr7GPJfqANMuGV+xQu3G4zclrTl93yzf5IsmAmlk=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=
