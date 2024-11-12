@@ -50,14 +50,16 @@ func main() {
 
 	// Initial new router
 	r := mux.NewRouter()
+	// Middleware
+	r.Use(middleware.Logger)
+	r.Use(middleware.Authenticate)
+
 	for _, endpoint := range routes.Endpoints {
 		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
 	}
+
 	r.MethodNotAllowedHandler = http.HandlerFunc(handlers.NotAllowed)
 	r.NotFoundHandler = http.HandlerFunc(handlers.NotFound)
-
-	// Middleware
-	r.Use(middleware.Logger)
 
 	// Start server
 	logger.Logger.Info("Server started on", zap.String("port", config.Config.Server.Port))

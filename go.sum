@@ -1,7 +1,9 @@
-github.com/AnhCaooo/go-goods v0.0.0-20241110095317-0ddf69b67f28 h1:ECPxUN9o1cPh5E2OdGTkklIGqV1FIIn+D2UJ1WFdlC8=
-github.com/AnhCaooo/go-goods v0.0.0-20241110095317-0ddf69b67f28/go.mod h1:o1SIr7GPJfqANMuGV+xQu3G4zclrTl93yzf5IsmAmlk=
+github.com/AnhCaooo/go-goods v0.0.0-20241112132727-a64f2cd8c083 h1:bRJ58gJ1oLYVfmFn/ySfRQVMf4brA1RpCz6iHCNQTwo=
+github.com/AnhCaooo/go-goods v0.0.0-20241112132727-a64f2cd8c083/go.mod h1:Nn/U3gUZRFuiTf8rhSVVIP3elKYxm0dDVA+/fBOAyYM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
+github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
 github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=
 github.com/golang/snappy v0.0.4/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=

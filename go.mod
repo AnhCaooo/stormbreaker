@@ -3,7 +3,7 @@ module github.com/AnhCaooo/stormbreaker
 go 1.21.6
 
 require (
-	github.com/AnhCaooo/go-goods v0.0.0-20241110095317-0ddf69b67f28
+	github.com/AnhCaooo/go-goods v0.0.0-20241112132727-a64f2cd8c083
 	github.com/gorilla/mux v1.8.1
 	go.mongodb.org/mongo-driver v1.16.1
 	go.uber.org/zap v1.26.0
@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
