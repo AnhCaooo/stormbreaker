@@ -15,22 +15,20 @@ import (
 
 var Config models.Config
 
-const configPath string = "/internal/config/"
-
 // load the configuration from the encrypted yaml config file
 func ReadFile(cfg *models.Config) error {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return err
 	}
-	keyFilePath := currentDir + configPath + constants.CryptoKeyFile
+	keyFilePath := currentDir + constants.CryptoKeyFile
 	key, err := crypto.ReadEncryptionKey(keyFilePath)
 	if err != nil {
 		return err
 	}
 
-	encryptedConfigFilePath := currentDir + configPath + constants.EncryptedConfigFile
-	decryptedConfigFilePath := currentDir + configPath + constants.DecryptedConfigFile
+	encryptedConfigFilePath := currentDir + constants.EncryptedConfigFile
+	decryptedConfigFilePath := currentDir + constants.DecryptedConfigFile
 	if err = crypto.DecryptFile(key, encryptedConfigFilePath, decryptedConfigFilePath); err != nil {
 		return err
 	}
