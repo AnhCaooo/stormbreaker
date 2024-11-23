@@ -29,6 +29,13 @@ func ReadFile(cfg *models.Config) error {
 
 	encryptedConfigFilePath := currentDir + constants.EncryptedConfigFile
 	decryptedConfigFilePath := currentDir + constants.DecryptedConfigFile
+
+	// *Note*: uncomment this to get the encrypted config file update if there is some configs updated in config.yml
+	// originalConfig := currentDir + constants.ConfigFile
+	// if err = crypto.EncryptFile(key, originalConfig, encryptedConfigFilePath); err != nil {
+	// 	return err
+	// }
+
 	if err = crypto.DecryptFile(key, encryptedConfigFilePath, decryptedConfigFilePath); err != nil {
 		return err
 	}
