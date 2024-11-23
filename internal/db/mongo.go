@@ -26,6 +26,8 @@ func Init(ctx context.Context, cfg models.Database) (*mongo.Client, error) {
 		return nil, fmt.Errorf("failed to ping database. Error: %s", err.Error())
 	}
 
+	Collection = client.Database(cfg.Name).Collection(cfg.Collection)
+
 	logger.Logger.Info("Successfully connected to database")
 	return client, nil
 }
