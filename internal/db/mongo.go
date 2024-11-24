@@ -7,13 +7,14 @@ import (
 
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var Collection *mongo.Collection
 
-// Function to connect to mongo database instance and create collection if it does not exist
+// Init to connect to mongo database instance and create collection if it does not exist
 func Init(ctx context.Context, cfg models.Database) (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI(getURI(cfg))
 	client, err := mongo.Connect(ctx, clientOptions)
@@ -34,4 +35,39 @@ func Init(ctx context.Context, cfg models.Database) (*mongo.Client, error) {
 
 func getURI(cfg models.Database) string {
 	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+}
+
+// InsertPriceSettings inserts a new document into the PriceSettings collection
+//
+// Use case: set the price settings after user signed up.
+func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) error {
+	_, err := Collection.InsertOne(ctx, settings)
+	return err
+}
+
+// GetPriceSettings retrieves a document by UserID
+func GetPriceSettings(ctx context.Context, userID string) (*models.PriceSettings, error) {
+	filter := bson.M{"user_id": userID}
+
+	var settings models.PriceSettings
+	err := Collection.FindOne(ctx, filter).Decode(&settings)
+	if err != nil {
+		return nil, err
+	}
+	return &settings, nil
+}
+
+// PatchPriceSettings updates partial data for user's price settings.
+//
+// Use case: update the price settings for specific user
+func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) error {
+
+	return nil
+}
+
+// DeletePriceSettings deletes user's price settings.
+//
+// Use case: delete the price settings if user is deleted
+func DeletePriceSettings(ctx context.Context, userID string) error {
+	return nil
 }

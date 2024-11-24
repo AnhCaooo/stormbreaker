@@ -59,3 +59,10 @@ type DailyPrice struct {
 	Available bool        `json:"available"`
 	Prices    PriceSeries `json:"prices"`
 }
+
+// PriceSettings represents the schema for the PriceSettings collection
+type PriceSettings struct {
+	UserID      string  `bson:"user_id" json:"user_id"`
+	VatIncluded bool    `bson:"vat_included" json:"vat_included"`
+	Marginal    float64 `bson:"margin" json:"margin"`
+}
