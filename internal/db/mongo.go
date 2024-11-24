@@ -87,7 +87,7 @@ func DeletePriceSettings(ctx context.Context, userID string) error {
 
 	result, err := Collection.DeleteOne(ctx, filter)
 	if err != nil {
-		return fmt.Errorf("failed to delete price settings. Error: %s", err.Error())
+		return fmt.Errorf("failed to delete price settings: %s", err.Error())
 	}
 	logger.Logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
 	return nil

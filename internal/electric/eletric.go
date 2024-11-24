@@ -46,21 +46,21 @@ func FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, fmt.Errorf("[server] failed to fetch data. Error: %s", err.Error())
+			return nil, fmt.Errorf("[server] failed to fetch data: %s", err.Error())
 		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return nil, fmt.Errorf("[request error] failed to fetch data. Error: %s", err.Error())
+		return nil, fmt.Errorf("[request error] failed to fetch data: %s", err.Error())
 	}
 
 	todayTomorrowResponse, err = helpers.MapToTodayTomorrowResponse(todayTomorrowPrice)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, fmt.Errorf("[server] failed to map to informative struct data. Error: %s", err.Error())
+		return nil, fmt.Errorf("[server] failed to map to informative struct data: %s", err.Error())
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowResponse); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return nil, fmt.Errorf("[server] failed to encode response data. Error: %s", err.Error())
+		return nil, fmt.Errorf("[server] failed to encode response data: %s", err.Error())
 	}
 
 	logger.Logger.Info("[from external source] get today and tomorrow's exchange price successfully")
