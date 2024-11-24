@@ -30,5 +30,25 @@ var Endpoints = []Endpoint{
 		Handler: api.GetTodayTomorrowPrice,
 		Method:  "GET",
 	},
+	{
+		Path:    "v1/price-settings",
+		Handler: nil,
+		Method:  "GET",
+	},
+	{
+		Path:    "v1/price-settings",
+		Handler: nil,
+		Method:  "POST",
+	},
+	{
+		Path:    "v1/price-settings",
+		Handler: nil,
+		Method:  "PATCH",
+	},
+	{
+		Path:    "v1/price-settings",
+		Handler: nil,
+		Method:  "DELETE",
+	},
 	// ? /v1/market-price/usage-situation - use AI to analyze from which time user can use normally, or just fixed limit?
 }
