@@ -15,11 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// Ping the connection to the server
-func Ping(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "pong")
-}
-
 // Fetch the market spot price of electric in Finland in any times
 func PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := encode.DecodeRequest[models.PriceRequest](r)

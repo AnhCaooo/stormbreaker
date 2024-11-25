@@ -29,12 +29,12 @@ func isValidDateRange(startDate, endDate string) (isValid bool, err error) {
 
 	startDateTime, err := validDate(startDate)
 	if err != nil {
-		return isValid, fmt.Errorf("failed to validate start date. Error: %s", err.Error())
+		return isValid, fmt.Errorf("failed to validate start date: %s", err.Error())
 	}
 
 	endDateTime, err := validDate(endDate)
 	if err != nil {
-		return isValid, fmt.Errorf("failed to validate end date. Error: %s", err.Error())
+		return isValid, fmt.Errorf("failed to validate end date: %s", err.Error())
 	}
 
 	if startDateTime == endDateTime || startDateTime.Before(endDateTime) {
