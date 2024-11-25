@@ -31,22 +31,22 @@ var Endpoints = []Endpoint{
 		Method:  "GET",
 	},
 	{
-		Path:    "v1/price-settings",
+		Path:    "/v1/price-settings/{userid}",
 		Handler: handlers.GetPriceSettings,
 		Method:  "GET",
 	},
 	{
-		Path:    "v1/price-settings",
+		Path:    "/v1/price-settings",
 		Handler: handlers.CreatePriceSettings,
 		Method:  "POST",
 	},
 	{
-		Path:    "v1/price-settings",
+		Path:    "/v1/price-settings",
 		Handler: handlers.PatchPriceSettings,
 		Method:  "PATCH",
 	},
 	{
-		Path:    "v1/price-settings",
+		Path:    "/v1/price-settings/{userid}",
 		Handler: handlers.DeletePriceSettings,
 		Method:  "DELETE",
 	},
