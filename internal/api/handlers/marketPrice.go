@@ -1,5 +1,4 @@
-// AnhCao 2024
-package api
+package handlers
 
 import (
 	"fmt"
