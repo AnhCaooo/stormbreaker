@@ -15,14 +15,15 @@ import (
 
 // GetPriceSettings retrieves the price settings for specified user
 func GetPriceSettings(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := encode.DecodeRequest[string](r)
-	if err != nil {
-		logger.Logger.Error(constants.Client, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// Extract userid from query params
+	userid := r.URL.Query().Get("userid")
+	if userid == "" {
+		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
+		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
 		return
 	}
 
-	settings, err := db.GetPriceSettings(context.TODO(), reqBody)
+	settings, err := db.GetPriceSettings(context.TODO(), userid)
 	if err != nil {
 		logger.Logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -92,20 +93,21 @@ func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 // DeletePriceSettings deletes the price settings when user was deleted or removed
 func DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
-	reqBody, err := encode.DecodeRequest[string](r)
-	if err != nil {
-		logger.Logger.Error(constants.Client, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// Extract userid from query params
+	userid := r.URL.Query().Get("userid")
+	if userid == "" {
+		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
+		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
 		return
 	}
 
-	if err := db.DeletePriceSettings(context.TODO(), reqBody); err != nil {
+	if err := db.DeletePriceSettings(context.TODO(), userid); err != nil {
 		logger.Logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, reqBody); err != nil {
+	if err := encode.EncodeResponse(w, http.StatusOK, userid); err != nil {
 		logger.Logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
