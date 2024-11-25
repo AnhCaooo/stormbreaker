@@ -15,7 +15,29 @@ import (
 
 // GetPriceSettings retrieves the price settings for specified user
 func GetPriceSettings(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "pong")
+	reqBody, err := encode.DecodeRequest[string](r)
+	if err != nil {
+		logger.Logger.Error(constants.Client, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	settings, err := db.GetPriceSettings(context.TODO(), reqBody)
+	if err != nil {
+		logger.Logger.Error(constants.Server, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := encode.EncodeResponse(w, http.StatusOK, settings); err != nil {
+		logger.Logger.Error(
+			fmt.Sprintf("%s failed to encode response body:", constants.Server),
+			zap.Error(err),
+		)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 }
 
 // CreatePriceSettings creates a new price settings for new user
