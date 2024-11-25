@@ -32,22 +32,22 @@ var Endpoints = []Endpoint{
 	},
 	{
 		Path:    "v1/price-settings",
-		Handler: nil,
+		Handler: handlers.GetPriceSettings,
 		Method:  "GET",
 	},
 	{
 		Path:    "v1/price-settings",
-		Handler: nil,
+		Handler: handlers.CreatePriceSettings,
 		Method:  "POST",
 	},
 	{
 		Path:    "v1/price-settings",
-		Handler: nil,
+		Handler: handlers.PatchPriceSettings,
 		Method:  "PATCH",
 	},
 	{
 		Path:    "v1/price-settings",
-		Handler: nil,
+		Handler: handlers.DeletePriceSettings,
 		Method:  "DELETE",
 	},
 	// ? /v1/market-price/usage-situation - use AI to analyze from which time user can use normally, or just fixed limit?
