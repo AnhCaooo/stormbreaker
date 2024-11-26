@@ -58,7 +58,11 @@ func CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusCreated, reqBody); err != nil {
+	response := map[string]string{
+		"message": "Operation completed successfully",
+	}
+
+	if err := encode.EncodeResponse(w, http.StatusCreated, response); err != nil {
 		logger.Logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
@@ -83,7 +87,11 @@ func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusCreated, reqBody); err != nil {
+	response := map[string]string{
+		"message": "Operation completed successfully",
+	}
+
+	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
 		logger.Logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
@@ -110,7 +118,11 @@ func DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, userid); err != nil {
+	response := map[string]string{
+		"message": "Operation completed successfully",
+	}
+
+	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
 		logger.Logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
