@@ -55,10 +55,8 @@ func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) err
 	result, err := Collection.InsertOne(ctx, settings)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			logger.Logger.Error("failed to insert: document already exists")
-			return fmt.Errorf("failed to insert: Document already exists")
+			return fmt.Errorf("failed to insert: document already exists")
 		} else {
-			logger.Logger.Error("failed to insert:", zap.Error(err))
 			return fmt.Errorf("failed to insert: %s", err.Error())
 		}
 	}
@@ -94,6 +92,9 @@ func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) erro
 	if err != nil {
 		return fmt.Errorf("failed to update price settings: %s", err.Error())
 	}
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("failed to update price settings: no matched settings were found")
+	}
 	logger.Logger.Info("update price settings successfully", zap.Any("updated_amount", result.MatchedCount))
 	return nil
 }
@@ -105,6 +106,9 @@ func DeletePriceSettings(ctx context.Context, userID string) error {
 	result, err := Collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to delete price settings: %s", err.Error())
+	}
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("failed to delete price settings: no matched settings were found")
 	}
 	logger.Logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
 	return nil
