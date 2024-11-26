@@ -10,13 +10,15 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 // GetPriceSettings retrieves the price settings for specified user
 func GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	// Extract userid from query params
-	userid := r.URL.Query().Get("userid")
+	vars := mux.Vars(r)
+	userid := vars["userid"]
 	if userid == "" {
 		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
 		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
@@ -94,7 +96,8 @@ func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 // DeletePriceSettings deletes the price settings when user was deleted or removed
 func DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	// Extract userid from query params
-	userid := r.URL.Query().Get("userid")
+	vars := mux.Vars(r)
+	userid := vars["userid"]
 	if userid == "" {
 		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
 		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
