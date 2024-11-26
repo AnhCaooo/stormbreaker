@@ -39,10 +39,31 @@ func getURI(cfg models.Database) string {
 }
 
 // InsertPriceSettings inserts a new document into the PriceSettings collection
-//
-// Use case: set the price settings after user signed up.
 func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) error {
-	_, err := Collection.InsertOne(ctx, settings)
+	// Ensure unique index (only needs to be done once)
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{"user_id": 1}, // Unique on "user_id" field
+		Options: options.Index().
+			SetUnique(true),
+	}
+
+	_, err := Collection.Indexes().CreateOne(ctx, indexModel)
+	if err != nil {
+		return fmt.Errorf("failed to create index: %s", err.Error())
+	}
+
+	result, err := Collection.InsertOne(ctx, settings)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			logger.Logger.Error("failed to insert: document already exists")
+			return fmt.Errorf("failed to insert: Document already exists")
+		} else {
+			logger.Logger.Error("failed to insert:", zap.Error(err))
+			return fmt.Errorf("failed to insert: %s", err.Error())
+		}
+	}
+
+	logger.Logger.Info("update price settings successfully", zap.Any("updated_id", result.InsertedID))
 	return err
 }
 
@@ -60,8 +81,6 @@ func GetPriceSettings(ctx context.Context, userID string) (*models.PriceSettings
 }
 
 // PatchPriceSettings updates partial data for user's price settings.
-//
-// Use case: update the price settings for specific user
 func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) error {
 	filter := bson.M{"user_id": settings.UserID}
 
@@ -80,8 +99,6 @@ func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) erro
 }
 
 // DeletePriceSettings deletes user's price settings.
-//
-// Use case: delete the price settings if user is deleted
 func DeletePriceSettings(ctx context.Context, userID string) error {
 	filter := bson.M{"user_id": userID}
 
