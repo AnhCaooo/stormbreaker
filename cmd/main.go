@@ -4,10 +4,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
+	"github.com/AnhCaooo/go-goods/log"
 	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
 	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
@@ -15,9 +14,9 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
-	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
@@ -28,25 +27,25 @@ func main() {
 	ctx := context.Background()
 
 	// Initialize logger
-	logger.InitLogger()
+	logger := log.InitLogger(zapcore.InfoLevel)
+	defer logger.Sync()
 
 	// Read configuration file
 	err := config.ReadFile(&config.Config)
 	if err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
-		os.Exit(1)
+		logger.Fatal(constants.Server, zap.Error(err))
 	}
 
 	// Initialize cache
 	cache.NewCache()
 
 	// Initialize database connection
-	mongo, err := db.Init(ctx, config.Config.Database)
+	mongo := db.Init(ctx, &config.Config.Database, logger, nil)
+	mongoClient, err := mongo.EstablishConnection()
 	if err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
-		os.Exit(1)
+		logger.Fatal(constants.Server, zap.Error(err))
 	}
-	defer mongo.Disconnect(ctx)
+	defer mongoClient.Disconnect(ctx)
 
 	// Initial new router
 	r := mux.NewRouter()
@@ -62,6 +61,6 @@ func main() {
 	r.NotFoundHandler = http.HandlerFunc(handlers.NotFound)
 
 	// Start server
-	logger.Logger.Info("Server started on", zap.String("port", config.Config.Server.Port))
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", config.Config.Server.Port), r))
+	logger.Info("Server started on", zap.String("port", config.Config.Server.Port))
+	http.ListenAndServe(fmt.Sprintf(":%s", config.Config.Server.Port), r)
 }
