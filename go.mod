@@ -3,10 +3,10 @@ module github.com/AnhCaooo/stormbreaker
 go 1.21.6
 
 require (
-	github.com/AnhCaooo/go-goods v0.0.0-20241112132727-a64f2cd8c083
+	github.com/AnhCaooo/go-goods v0.0.0-20241127214534-b1303bbc2b99
 	github.com/gorilla/mux v1.8.1
 	go.mongodb.org/mongo-driver v1.17.1
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
