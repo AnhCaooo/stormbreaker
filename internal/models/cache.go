@@ -5,18 +5,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"go.uber.org/zap"
 )
 
 type Cache struct {
-	Data map[string]CacheValue
-	lock sync.Mutex
+	Data   map[string]CacheValue
+	logger *zap.Logger
+	lock   sync.Mutex
 }
 
 type CacheValue struct {
 	Value      interface{}
 	Expiration time.Time
+}
+
+func NewCache() *Cache {
+	return &Cache{
+		Data: make(map[string]CacheValue),
+	}
 }
 
 // a method is used to add new key-value pair to the cache.
@@ -39,7 +45,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
-	logger.Logger.Debug("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
+	c.logger.Debug("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -61,10 +67,10 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	value, isValid := c.Data[key]
 	if !isValid || time.Now().After(value.Expiration) {
 		delete(c.Data, key)
-		logger.Logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
+		c.logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
 		return nil, false
 	}
-	logger.Logger.Debug("[server] cache living time.",
+	c.logger.Debug("[server] cache living time.",
 		zap.Any("expired-time-utc", value.Expiration),
 		zap.Time("current-time-utc", time.Now().UTC()),
 	)
