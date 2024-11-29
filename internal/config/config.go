@@ -13,10 +13,20 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
-var Config models.Config
-
 // load the configuration from the encrypted yaml config file
-func ReadFile(cfg *models.Config) error {
+func LoadFile(cfg *models.Config) error {
+	if err := readFile(cfg); err != nil {
+		return err
+	}
+	// Validate configuration data
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// ReadFile reads the encrypted configuration file then decrypt and read it
+func readFile(cfg *models.Config) error {
 	currentDir, err := helpers.GetCurrentDir()
 	if err != nil {
 		return err

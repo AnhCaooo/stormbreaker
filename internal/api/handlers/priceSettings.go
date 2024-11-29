@@ -1,39 +1,36 @@
 package handlers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
-	"github.com/AnhCaooo/stormbreaker/internal/db"
-	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 // GetPriceSettings retrieves the price settings for specified user
-func GetPriceSettings(w http.ResponseWriter, r *http.Request) {
+func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	// Extract userid from query params
 	vars := mux.Vars(r)
 	userid := vars["userid"]
 	if userid == "" {
-		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
+		h.logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
 		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
 		return
 	}
 
-	settings, err := db.GetPriceSettings(context.TODO(), userid)
+	settings, err := h.mongo.GetPriceSettings(userid)
 	if err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusOK, settings); err != nil {
-		logger.Logger.Error(
+		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)
@@ -44,16 +41,16 @@ func GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // CreatePriceSettings creates a new price settings for new user
-func CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
+func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
-		logger.Logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := db.InsertPriceSettings(context.TODO(), reqBody); err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
+	if err := h.mongo.InsertPriceSettings(reqBody); err != nil {
+		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -63,7 +60,7 @@ func CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusCreated, response); err != nil {
-		logger.Logger.Error(
+		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)
@@ -73,16 +70,16 @@ func CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // PatchPriceSettings updates the price settings for specified user
-func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
+func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
-		logger.Logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := db.PatchPriceSettings(context.TODO(), reqBody); err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
+	if err := h.mongo.PatchPriceSettings(reqBody); err != nil {
+		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -92,7 +89,7 @@ func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
-		logger.Logger.Error(
+		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)
@@ -102,18 +99,18 @@ func PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePriceSettings deletes the price settings when user was deleted or removed
-func DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
+func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	// Extract userid from query params
 	vars := mux.Vars(r)
 	userid := vars["userid"]
 	if userid == "" {
-		logger.Logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
+		h.logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
 		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
 		return
 	}
 
-	if err := db.DeletePriceSettings(context.TODO(), userid); err != nil {
-		logger.Logger.Error(constants.Server, zap.Error(err))
+	if err := h.mongo.DeletePriceSettings(userid); err != nil {
+		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -123,7 +120,7 @@ func DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
-		logger.Logger.Error(
+		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)

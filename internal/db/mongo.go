@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AnhCaooo/stormbreaker/internal/logger"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,33 +12,48 @@ import (
 	"go.uber.org/zap"
 )
 
-var Collection *mongo.Collection
+type Mongo struct {
+	config *models.Database
+	logger *zap.Logger
+	ctx    context.Context
+}
+
+func NewMongo(ctx context.Context, config *models.Database, logger *zap.Logger) *Mongo {
+	return &Mongo{
+		config: config,
+		logger: logger,
+		ctx:    ctx,
+	}
+}
+
+var collection *mongo.Collection
 
 // Init to connect to mongo database instance and create collection if it does not exist
-func Init(ctx context.Context, cfg models.Database) (*mongo.Client, error) {
-	clientOptions := options.Client().ApplyURI(getURI(cfg))
-	client, err := mongo.Connect(ctx, clientOptions)
+func (db Mongo) EstablishConnection() (*mongo.Client, error) {
+	clientOptions := options.Client().ApplyURI(db.getURI())
+	client, err := mongo.Connect(db.ctx, clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %s", err.Error())
 	}
 
-	err = client.Ping(ctx, nil)
+	err = client.Ping(db.ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
 	}
 
-	Collection = client.Database(cfg.Name).Collection(cfg.Collection)
+	collection = client.Database(db.config.Name).Collection(db.config.Collection)
 
-	logger.Logger.Info("Successfully connected to database")
+	db.logger.Info("Successfully connected to database")
 	return client, nil
 }
 
-func getURI(cfg models.Database) string {
-	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", cfg.Username, cfg.Password, cfg.Host, cfg.Port)
+// getURI retrieves URI connection with Mongo image
+func (db Mongo) getURI() string {
+	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", db.config.Username, db.config.Password, db.config.Host, db.config.Port)
 }
 
 // InsertPriceSettings inserts a new document into the PriceSettings collection
-func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) error {
+func (db Mongo) InsertPriceSettings(settings models.PriceSettings) error {
 	// Ensure unique index (only needs to be done once)
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{"user_id": 1}, // Unique on "user_id" field
@@ -47,12 +61,12 @@ func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) err
 			SetUnique(true),
 	}
 
-	_, err := Collection.Indexes().CreateOne(ctx, indexModel)
+	_, err := collection.Indexes().CreateOne(db.ctx, indexModel)
 	if err != nil {
 		return fmt.Errorf("failed to create index: %s", err.Error())
 	}
 
-	result, err := Collection.InsertOne(ctx, settings)
+	result, err := collection.InsertOne(db.ctx, settings)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return fmt.Errorf("failed to insert: document already exists")
@@ -61,25 +75,24 @@ func InsertPriceSettings(ctx context.Context, settings models.PriceSettings) err
 		}
 	}
 
-	logger.Logger.Info("update price settings successfully", zap.Any("updated_id", result.InsertedID))
+	db.logger.Info("update price settings successfully", zap.Any("updated_id", result.InsertedID))
 	return err
 }
 
 // GetPriceSettings retrieves a document by UserID
-func GetPriceSettings(ctx context.Context, userID string) (*models.PriceSettings, error) {
+func (db Mongo) GetPriceSettings(userID string) (*models.PriceSettings, error) {
 	filter := bson.M{"user_id": userID}
 
-	var settings models.PriceSettings
-	err := Collection.FindOne(ctx, filter).Decode(&settings)
-	if err != nil {
+	settings := models.PriceSettings{}
+	if err := collection.FindOne(db.ctx, filter).Decode(&settings); err != nil {
 		return nil, fmt.Errorf("failed to get price setting: %s", err.Error())
 	}
-	logger.Logger.Info("get price settings successfully", zap.Any("user_id", userID))
+	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))
 	return &settings, nil
 }
 
 // PatchPriceSettings updates partial data for user's price settings.
-func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) error {
+func (db Mongo) PatchPriceSettings(settings models.PriceSettings) error {
 	filter := bson.M{"user_id": settings.UserID}
 
 	updates := bson.M{
@@ -88,28 +101,28 @@ func PatchPriceSettings(ctx context.Context, settings models.PriceSettings) erro
 			"margin":       settings.Marginal,
 		},
 	}
-	result, err := Collection.UpdateOne(ctx, filter, updates)
+	result, err := collection.UpdateOne(db.ctx, filter, updates)
 	if err != nil {
 		return fmt.Errorf("failed to update price settings: %s", err.Error())
 	}
 	if result.MatchedCount == 0 {
 		return fmt.Errorf("failed to update price settings: no matched settings were found")
 	}
-	logger.Logger.Info("update price settings successfully", zap.Any("updated_amount", result.MatchedCount))
+	db.logger.Info("update price settings successfully", zap.Any("updated_amount", result.MatchedCount))
 	return nil
 }
 
 // DeletePriceSettings deletes user's price settings.
-func DeletePriceSettings(ctx context.Context, userID string) error {
+func (db Mongo) DeletePriceSettings(userID string) error {
 	filter := bson.M{"user_id": userID}
 
-	result, err := Collection.DeleteOne(ctx, filter)
+	result, err := collection.DeleteOne(db.ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to delete price settings: %s", err.Error())
 	}
 	if result.DeletedCount == 0 {
 		return fmt.Errorf("failed to delete price settings: no matched settings were found")
 	}
-	logger.Logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
+	db.logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
 	return nil
 }
