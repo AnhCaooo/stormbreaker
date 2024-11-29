@@ -19,7 +19,7 @@ type Mongo struct {
 	collectionClient *mongo.Collection
 }
 
-func Init(ctx context.Context, config *models.Database, logger *zap.Logger, collectionClient *mongo.Collection) *Mongo {
+func NewMongo(ctx context.Context, config *models.Database, logger *zap.Logger) *Mongo {
 	return &Mongo{
 		config:           config,
 		logger:           logger,
