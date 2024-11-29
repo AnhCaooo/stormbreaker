@@ -6,3 +6,8 @@ type Config struct {
 	Database Database `yaml:"database"`
 	Supabase Supabase `yaml:"supabase"`
 }
+
+// todo: validate configuration
+func (c *Config) Validate() error {
+	return nil
+}
