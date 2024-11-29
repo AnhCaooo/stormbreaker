@@ -5,11 +5,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/AnhCaooo/go-goods/log"
 	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
 	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
@@ -18,6 +23,65 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+func initializeRouter(handler *handlers.Handler, middleware *middleware.Middleware, endpoints []routes.Endpoint) *mux.Router {
+	r := mux.NewRouter()
+	// Apply middlewares
+	middlewares := []func(http.Handler) http.Handler{
+		middleware.Logger,
+		middleware.Authenticate,
+	}
+	for _, mw := range middlewares {
+		r.Use(mw)
+	}
+
+	// Apply endpoint handlers
+	for _, endpoint := range endpoints {
+		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
+	}
+
+	r.MethodNotAllowedHandler = http.HandlerFunc(handler.NotAllowed)
+	r.NotFoundHandler = http.HandlerFunc(handler.NotFound)
+	return r
+}
+
+func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.Router) {
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%s", config.Server.Port),
+		Handler: r,
+	}
+
+	// Channel to listen for termination signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	// Run the server in a separate goroutine
+	go func() {
+		logger.Info("Server starting", zap.String("port", config.Server.Port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Server error", zap.Error(err))
+		}
+	}()
+
+	// Wait for termination signal
+	select {
+	case <-ctx.Done(): // Context cancellation
+		logger.Warn("Context canceled")
+	case <-stop: // OS signal received
+		logger.Info("Termination signal received")
+	}
+
+	// Create a new context with timeout for graceful shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	logger.Info("Shutting down server...")
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
+	}
+
+	logger.Info("Server exited gracefully")
+}
 
 // todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
 // and update the value when tomorrow price is available. Maybe have a service
@@ -28,7 +92,7 @@ func main() {
 
 	// todo: implement to accept a dynamic log level
 	// Initialize logger
-	logger := log.InitLogger(zapcore.InfoLevel)
+	logger := log.InitLogger(zapcore.DebugLevel)
 	defer logger.Sync()
 
 	configuration := &models.Config{}
@@ -38,9 +102,8 @@ func main() {
 		logger.Fatal(constants.Server, zap.Error(err))
 	}
 
-	// todo: has own cache folder
 	// Initialize resources: cache, database
-	cache := models.NewCache()
+	cache := cache.NewCache(logger)
 	// Initialize database connection
 	mongo := db.NewMongo(ctx, &configuration.Database, logger)
 	mongoClient, err := mongo.EstablishConnection()
@@ -56,26 +119,8 @@ func main() {
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
 
-	// Initial new router
-	r := mux.NewRouter()
-
-	middlewares := []func(http.Handler) http.Handler{
-		middleware.Logger,
-		middleware.Authenticate,
-	}
-	for _, mw := range middlewares {
-		r.Use(mw)
-	}
-
-	// Initialize pool of endpoints
-	for _, endpoint := range endpoints {
-		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
-	}
-
-	r.MethodNotAllowedHandler = http.HandlerFunc(handler.NotAllowed)
-	r.NotFoundHandler = http.HandlerFunc(handler.NotFound)
-
+	// Initial new Mux router
+	r := initializeRouter(handler, middleware, endpoints)
 	// Start server
-	logger.Info("Server started on", zap.String("port", configuration.Server.Port))
-	http.ListenAndServe(fmt.Sprintf(":%s", configuration.Server.Port), r)
+	run(ctx, logger, configuration, r)
 }
