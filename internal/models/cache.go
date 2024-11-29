@@ -19,9 +19,10 @@ type CacheValue struct {
 	Expiration time.Time
 }
 
-func NewCache() *Cache {
+func NewCache(logger *zap.Logger) *Cache {
 	return &Cache{
-		Data: make(map[string]CacheValue),
+		Data:   make(map[string]CacheValue),
+		logger: logger,
 	}
 }
 
@@ -61,6 +62,7 @@ func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time
 // If the value is still valid, it returns the value and a boolean value of `true` to indicate that a valid value was found.
 // If the value is not valid (means not yet cached), it returns `nil` and a boolean value of `false`.
 func (c *Cache) Get(key string) (interface{}, bool) {
+	c.logger.Debug("get cache key: ", zap.String("key", key))
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
