@@ -16,6 +16,7 @@ type Handler struct {
 	mongo  *db.Mongo
 }
 
+// NewHandler returns a new Handler instance
 func NewHandler(logger *zap.Logger, cache *cache.Cache, mongo *db.Mongo) *Handler {
 	return &Handler{
 		logger: logger,
