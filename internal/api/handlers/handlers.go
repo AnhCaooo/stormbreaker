@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
-	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
 	logger *zap.Logger
-	cache  *models.Cache
+	cache  *cache.Cache
 	mongo  *db.Mongo
 }
 
-func NewHandler(logger *zap.Logger, cache *models.Cache, mongo *db.Mongo) *Handler {
+func NewHandler(logger *zap.Logger, cache *cache.Cache, mongo *db.Mongo) *Handler {
 	return &Handler{
 		logger: logger,
 		cache:  cache,
@@ -41,9 +41,4 @@ func (h Handler) NotAllowed(w http.ResponseWriter, r *http.Request) {
 // Ping the connection to the server
 func (h Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "pong")
-}
-
-func (h Handler) Logger(next http.Handler, w http.ResponseWriter, r *http.Request) {
-	h.logger.Info("request received", zap.String("method", r.Method), zap.String("endpoint", r.URL.Path))
-	next.ServeHTTP(w, r)
 }

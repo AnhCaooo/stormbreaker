@@ -1,5 +1,5 @@
 // AnhCao 2024
-package models
+package cache
 
 import (
 	"sync"
