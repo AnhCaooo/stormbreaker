@@ -53,7 +53,7 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	// Patch userID to price settings
 	reqBody.UserID = userId
-	if reqBody.UserID != "" {
+	if reqBody.UserID == "" {
 		http.Error(w, "cannot insert un-authenticated document", http.StatusBadRequest)
 		return
 	}
@@ -93,7 +93,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reqBody.UserID = userId
-	if reqBody.UserID != "" {
+	if reqBody.UserID == "" {
 		http.Error(w, "cannot insert un-authenticated document", http.StatusBadRequest)
 		return
 	}
