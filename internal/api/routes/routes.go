@@ -33,7 +33,7 @@ func InitializeEndpoints(handler *handlers.Handler) []Endpoint {
 			Method:  "GET",
 		},
 		{
-			Path:    "/v1/price-settings/{userid}",
+			Path:    "/v1/price-settings",
 			Handler: handler.GetPriceSettings,
 			Method:  "GET",
 		},
@@ -48,7 +48,7 @@ func InitializeEndpoints(handler *handlers.Handler) []Endpoint {
 			Method:  "PATCH",
 		},
 		{
-			Path:    "/v1/price-settings/{userid}",
+			Path:    "/v1/price-settings",
 			Handler: handler.DeletePriceSettings,
 			Method:  "DELETE",
 		},
