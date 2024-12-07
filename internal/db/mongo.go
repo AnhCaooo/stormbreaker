@@ -13,9 +13,10 @@ import (
 )
 
 type Mongo struct {
-	config *models.Database
-	logger *zap.Logger
-	ctx    context.Context
+	config     *models.Database
+	logger     *zap.Logger
+	ctx        context.Context
+	collection *mongo.Collection
 }
 
 func NewMongo(ctx context.Context, config *models.Database, logger *zap.Logger) *Mongo {
@@ -26,10 +27,8 @@ func NewMongo(ctx context.Context, config *models.Database, logger *zap.Logger) 
 	}
 }
 
-var collection *mongo.Collection
-
 // Init to connect to mongo database instance and create collection if it does not exist
-func (db Mongo) EstablishConnection() (*mongo.Client, error) {
+func (db *Mongo) EstablishConnection() (*mongo.Client, error) {
 	clientOptions := options.Client().ApplyURI(db.getURI())
 	client, err := mongo.Connect(db.ctx, clientOptions)
 	if err != nil {
@@ -41,7 +40,7 @@ func (db Mongo) EstablishConnection() (*mongo.Client, error) {
 		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
 	}
 
-	collection = client.Database(db.config.Name).Collection(db.config.Collection)
+	db.collection = client.Database(db.config.Name).Collection(db.config.Collection)
 
 	db.logger.Info("Successfully connected to database")
 	return client, nil
@@ -61,12 +60,12 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) error {
 			SetUnique(true),
 	}
 
-	_, err := collection.Indexes().CreateOne(db.ctx, indexModel)
+	_, err := db.collection.Indexes().CreateOne(db.ctx, indexModel)
 	if err != nil {
 		return fmt.Errorf("failed to create index: %s", err.Error())
 	}
 
-	result, err := collection.InsertOne(db.ctx, settings)
+	result, err := db.collection.InsertOne(db.ctx, settings)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return fmt.Errorf("failed to insert: document already exists")
@@ -84,7 +83,7 @@ func (db Mongo) GetPriceSettings(userID string) (*models.PriceSettings, error) {
 	filter := bson.M{"user_id": userID}
 
 	settings := models.PriceSettings{}
-	if err := collection.FindOne(db.ctx, filter).Decode(&settings); err != nil {
+	if err := db.collection.FindOne(db.ctx, filter).Decode(&settings); err != nil {
 		return nil, fmt.Errorf("failed to get price setting: %s", err.Error())
 	}
 	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))
@@ -101,7 +100,7 @@ func (db Mongo) PatchPriceSettings(settings models.PriceSettings) error {
 			"margin":       settings.Marginal,
 		},
 	}
-	result, err := collection.UpdateOne(db.ctx, filter, updates)
+	result, err := db.collection.UpdateOne(db.ctx, filter, updates)
 	if err != nil {
 		return fmt.Errorf("failed to update price settings: %s", err.Error())
 	}
@@ -116,7 +115,7 @@ func (db Mongo) PatchPriceSettings(settings models.PriceSettings) error {
 func (db Mongo) DeletePriceSettings(userID string) error {
 	filter := bson.M{"user_id": userID}
 
-	result, err := collection.DeleteOne(db.ctx, filter)
+	result, err := db.collection.DeleteOne(db.ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to delete price settings: %s", err.Error())
 	}

@@ -7,18 +7,14 @@ import (
 	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
-	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 // GetPriceSettings retrieves the price settings for specified user
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
-	// Extract userid from query params
-	vars := mux.Vars(r)
-	userid := vars["userid"]
-	if userid == "" {
-		h.logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
-		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
+	userid, ok := r.Context().Value(constants.UserIdKey).(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
 
@@ -100,16 +96,13 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 // DeletePriceSettings deletes the price settings when user was deleted or removed
 func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
-	// Extract userid from query params
-	vars := mux.Vars(r)
-	userid := vars["userid"]
-	if userid == "" {
-		h.logger.Error(fmt.Sprintf("%s missing userid parameter in URL", constants.Server))
-		http.Error(w, "Missing userid parameter in URL", http.StatusBadRequest)
+	userId, ok := r.Context().Value(constants.UserIdKey).(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
 		return
 	}
 
-	if err := h.mongo.DeletePriceSettings(userid); err != nil {
+	if err := h.mongo.DeletePriceSettings(userId); err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

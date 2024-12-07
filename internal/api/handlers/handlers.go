@@ -18,6 +18,10 @@ type Handler struct {
 
 // NewHandler returns a new Handler instance
 func NewHandler(logger *zap.Logger, cache *cache.Cache, mongo *db.Mongo) *Handler {
+	if mongo == nil {
+		logger.Warn("MongoDB client is nil, using mock or no-op database")
+	}
+
 	return &Handler{
 		logger: logger,
 		cache:  cache,

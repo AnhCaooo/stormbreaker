@@ -2,10 +2,12 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/AnhCaooo/go-goods/auth"
+	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.uber.org/zap"
 )
@@ -36,19 +38,31 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
 			w.WriteHeader(http.StatusForbidden)
-			m.logger.Info("permission Denied: No token provided")
+			m.logger.Error("permission Denied: No authentication provided in header")
 			w.Write([]byte("403 - Forbidden"))
 			return
 		}
 
 		tokenString = strings.Replace(tokenString, "Bearer ", "", 1)
-		err := auth.VerifyToken(tokenString, m.config.Supabase.Auth.JwtSecret)
+		token, err := auth.VerifyToken(tokenString, m.config.Supabase.Auth.JwtSecret)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			m.logger.Error("unauthorized request", zap.Error(err))
 			w.Write([]byte("401 - Unauthorized"))
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		// due to 'Supabase' authentication, it stores userId via "sub" field
+		userID, err := auth.ExtractValueFromTokenClaim(token, "sub")
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			m.logger.Error("unauthorized request", zap.Error(err))
+			w.Write([]byte("401 - Unauthorized"))
+			return
+		}
+
+		// Add userID to the context
+		ctx := context.WithValue(r.Context(), constants.UserIdKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

@@ -15,14 +15,21 @@ import (
 
 // Fetch the market spot price of electric in Finland in any times
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
+	userId, ok := r.Context().Value(constants.UserIdKey).(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+
 	reqBody, err := encode.DecodeRequest[models.PriceRequest](r)
 	if err != nil {
 		h.logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	electric := electric.NewElectric(h.logger)
-	externalData, errorType, err := electric.FetchSpotPrice(reqBody)
+
+	electric := electric.NewElectric(h.logger, h.mongo, userId)
+	externalData, errorType, err := electric.FetchSpotPrice(&reqBody)
 	if err != nil {
 		if errorType == models.SERVER_ERROR {
 			h.logger.Error(constants.Server, zap.Error(err))
@@ -50,7 +57,12 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 // If tomorrow's price is not available yet, return empty struct.
 // Then client needs to show readable information to indicate that data is not available yet.
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
-	cacheKey := "today-tomorrow-exchange-price"
+	userId, ok := r.Context().Value(constants.UserIdKey).(string)
+	if !ok {
+		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		return
+	}
+	cacheKey := fmt.Sprintf("%s-today-tomorrow-exchange-price", userId)
 
 	cachePrice, isValid := h.cache.Get(cacheKey)
 	if isValid {
@@ -66,7 +78,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	electric := electric.NewElectric(h.logger)
+	electric := electric.NewElectric(h.logger, h.mongo, userId)
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
 		h.logger.Error(

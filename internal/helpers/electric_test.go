@@ -11,71 +11,67 @@ import (
 func TestFormatMarketPricePostReqParameters(t *testing.T) {
 	tests := []struct {
 		name           string
-		givenParameter models.PriceRequest
+		requestPayload models.PriceRequest
+		priceSettings  models.PriceSettings
 		expectedUrl    string
 		expectedErr    string
 	}{
 		{
 			name: "valid request parameter",
-			givenParameter: models.PriceRequest{
+			requestPayload: models.PriceRequest{
 				StartDate:         "2024-06-05",
 				EndDate:           "2024-06-05",
-				Marginal:          0.59,
 				Group:             "hour",
-				VatIncluded:       1,
 				CompareToLastYear: 0,
+			},
+			priceSettings: models.PriceSettings{
+				Marginal:    0.59,
+				VatIncluded: true,
 			},
 			expectedUrl: "https://oomi.fi/wp-json/spot-price/v1/get?starttime=2024-06-05&endtime=2024-06-05&margin=0.590000&group=hour&include_vat=1&compare_to_last_year=0",
 			expectedErr: "",
 		},
 		{
 			name: "invalid request parameter (invalid date range)",
-			givenParameter: models.PriceRequest{
+			requestPayload: models.PriceRequest{
 				StartDate:         "2024-06-07",
 				EndDate:           "2024-06-05",
-				Marginal:          0.59,
 				Group:             "hour",
-				VatIncluded:       1,
 				CompareToLastYear: 0,
+			},
+			priceSettings: models.PriceSettings{
+				Marginal:    0.59,
+				VatIncluded: true,
 			},
 			expectedUrl: "",
 			expectedErr: "start date cannot after end date",
 		},
 		{
-			name: "invalid request parameter (invalid VatIncluded)",
-			givenParameter: models.PriceRequest{
+			name: "invalid request parameter (invalid Group)",
+			requestPayload: models.PriceRequest{
 				StartDate:         "2024-06-05",
 				EndDate:           "2024-06-05",
-				Marginal:          0.59,
-				Group:             "hour",
-				VatIncluded:       2,
+				Group:             "century",
 				CompareToLastYear: 0,
 			},
-			expectedUrl: "",
-			expectedErr: "vatIncluded needs to be value '0' or '1' only",
-		},
-		{
-			name: "invalid request parameter (invalid Group)",
-			givenParameter: models.PriceRequest{
-				StartDate:         "2024-06-05",
-				EndDate:           "2024-06-05",
-				Marginal:          0.59,
-				Group:             "century",
-				VatIncluded:       1,
-				CompareToLastYear: 0,
+			priceSettings: models.PriceSettings{
+				Marginal:    0.59,
+				VatIncluded: true,
 			},
 			expectedUrl: "",
 			expectedErr: "group should have valid value: 'hour', 'day', 'week', 'month', 'year'",
 		},
 		{
 			name: "invalid request parameter (invalid CompareToLastYear)",
-			givenParameter: models.PriceRequest{
+			requestPayload: models.PriceRequest{
 				StartDate:         "2024-06-05",
 				EndDate:           "2024-06-05",
-				Marginal:          0.59,
 				Group:             "hour",
-				VatIncluded:       1,
 				CompareToLastYear: 222,
+			},
+			priceSettings: models.PriceSettings{
+				Marginal:    0.59,
+				VatIncluded: true,
 			},
 			expectedUrl: "",
 			expectedErr: "compareToLastYear needs to be value '0' or '1' only",
@@ -83,19 +79,22 @@ func TestFormatMarketPricePostReqParameters(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, err := FormatMarketPricePostReqParameters(test.givenParameter)
-		if err != nil && err.Error() != test.expectedErr {
-			t.Errorf("got %q, wanted %q", err.Error(), test.expectedErr)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			result, err := FormatMarketPricePostReqParameters(&test.requestPayload, &test.priceSettings)
+			if err != nil && err.Error() != test.expectedErr {
+				t.Errorf("got %q, wanted %q", err.Error(), test.expectedErr)
+			}
 
-		if err == nil && result != test.expectedUrl {
-			t.Errorf("got %q, wanted %q", result, test.expectedErr)
-		}
+			if err == nil && result != test.expectedUrl {
+				t.Errorf("got %q, wanted %q", result, test.expectedErr)
+			}
+		})
+
 	}
 }
 
 func TestGetTodayAndTomorrowDateAsString(t *testing.T) {
-	today, tomorrow := getTodayAndTomorrowDateAsString()
+	today, tomorrow := GetTodayAndTomorrowDateAsString()
 
 	// Get current date and time
 	now := time.Now()
