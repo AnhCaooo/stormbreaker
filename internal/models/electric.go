@@ -40,12 +40,10 @@ type PriceResponse struct {
 
 // Represents as request body when client (web, mobile, backend service) call to get market price in specific time range
 type PriceRequest struct {
-	StartDate         string  `json:"starttime"` // StartDate has to be in this format "YYYY-MM-DD"
-	EndDate           string  `json:"endtime"`   // EndDate has to be in this format "YYYY-MM-DD"
-	Marginal          float64 `json:"margin"`    // Marginal is not allowed to be empty, it is ok to equal to "0"
-	Group             string  `json:"group"`
-	VatIncluded       int32   `json:"include_vat"`          // VatIncluded is allowed to equal to "0" and "1"
-	CompareToLastYear int32   `json:"compare_to_last_year"` // CompareToLastYear is allowed to equal to "0" and "1"
+	StartDate         string `json:"starttime"` // StartDate has to be in this format "YYYY-MM-DD"
+	EndDate           string `json:"endtime"`   // EndDate has to be in this format "YYYY-MM-DD"
+	Group             string `json:"group"`
+	CompareToLastYear int32  `json:"compare_to_last_year"` // CompareToLastYear is allowed to equal to "0" and "1"
 }
 
 // Represents a struct of today and tomorrow exchange price

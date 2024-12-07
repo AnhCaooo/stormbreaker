@@ -8,8 +8,8 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 )
 
-// receives 'requestParameters' struct and return appropriate endpoint url
-func FormatMarketPricePostReqParameters(requestParameters models.PriceRequest) (endPoint string, err error) {
+// receives 'requestParameters' struct and price settings. Then return appropriate endpoint url
+func FormatMarketPricePostReqParameters(requestParameters *models.PriceRequest, settings *models.PriceSettings) (endPoint string, err error) {
 	url := fmt.Sprintf("%s/%s/%s", models.BASE_URL, models.SPOT_PRICE, models.GET_V1)
 
 	isValidDateRange, err := isValidDateRange(requestParameters.StartDate, requestParameters.EndDate)
@@ -21,11 +21,11 @@ func FormatMarketPricePostReqParameters(requestParameters models.PriceRequest) (
 		return "", fmt.Errorf("group should have valid value: 'hour', 'day', 'week', 'month', 'year'")
 	}
 
-	if !isValidFloat(requestParameters.Marginal) {
+	if !isValidFloat(settings.Marginal) {
 		return "", fmt.Errorf("marginal should have float value or equal to 0")
 	}
 
-	if !isValidInt(requestParameters.VatIncluded) {
+	if !isValidInt(parseVatIncludedFromBoolToInt32(settings.VatIncluded)) {
 		return "", fmt.Errorf("vatIncluded needs to be value '0' or '1' only")
 	}
 
@@ -34,23 +34,9 @@ func FormatMarketPricePostReqParameters(requestParameters models.PriceRequest) (
 	}
 
 	return fmt.Sprintf("%s?starttime=%s&endtime=%s&margin=%f&group=%s&include_vat=%d&compare_to_last_year=%d",
-		url, requestParameters.StartDate, requestParameters.EndDate, requestParameters.Marginal,
-		requestParameters.Group, requestParameters.VatIncluded, requestParameters.CompareToLastYear,
+		url, requestParameters.StartDate, requestParameters.EndDate, settings.Marginal,
+		requestParameters.Group, parseVatIncludedFromBoolToInt32(settings.VatIncluded), requestParameters.CompareToLastYear,
 	), nil
-}
-
-// return as request body with date of today and data of tomorrow.
-// Usage: get request body for '/market-price/today-tomorrow'
-func BuildTodayTomorrowAsBodyRequest() models.PriceRequest {
-	today, tomorrow := getTodayAndTomorrowDateAsString()
-	return models.PriceRequest{
-		StartDate:         today,
-		EndDate:           tomorrow,
-		Marginal:          0.59, // todo: this field should has default value at the beginning. However, it would be nice to give users have their own customizations and then read from db as it is different between users
-		Group:             "hour",
-		VatIncluded:       1, // todo: this field by default should be 1. However, it would be nice to give users have their own customizations
-		CompareToLastYear: 0,
-	}
 }
 
 // receives price's response and map it to `TodayTomorrowPrice` 's struct
@@ -72,7 +58,8 @@ func MapToTodayTomorrowResponse(data *models.PriceResponse) (response *models.To
 	return
 }
 
-func getTodayAndTomorrowDateAsString() (todayDate, tomorrowDate string) {
+// GetTodayAndTomorrowDateAsString returns date of today and tomorrow
+func GetTodayAndTomorrowDateAsString() (todayDate, tomorrowDate string) {
 	// Get today's date
 	today := time.Now()
 	// Get tomorrow's date by adding one day
@@ -83,6 +70,13 @@ func getTodayAndTomorrowDateAsString() (todayDate, tomorrowDate string) {
 	tomorrowDate = tomorrow.Format(DATE_FORMAT)
 
 	return
+}
+
+func parseVatIncludedFromBoolToInt32(included bool) int32 {
+	if included {
+		return 1
+	}
+	return 0
 }
 
 func getTodayPrices(response models.PriceResponse) (todayPrice *models.DailyPrice, err error) {
