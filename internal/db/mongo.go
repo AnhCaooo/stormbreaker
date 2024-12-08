@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -51,8 +52,29 @@ func (db Mongo) getURI() string {
 	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", db.config.Username, db.config.Password, db.config.Host, db.config.Port)
 }
 
-// InsertPriceSettings inserts a new document into the PriceSettings collection
-func (db Mongo) InsertPriceSettings(settings models.PriceSettings) error {
+// todo: unit test
+// GetPriceSettings retrieves a document by UserID
+func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings, statusCode int, err error) {
+	filter := bson.M{"user_id": userID}
+
+	if err = db.collection.FindOne(db.ctx, filter).Decode(settings); err != nil {
+		statusCode = http.StatusNotFound
+		err = fmt.Errorf("failed to get price setting: %s", err.Error())
+		return
+	}
+	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))
+	return settings, http.StatusOK, nil
+}
+
+// todo: unit test
+// InsertPriceSettings inserts a new document into the PriceSettings collection.
+func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode int, err error) {
+	if settings.UserID == "" {
+		statusCode = http.StatusUnauthorized
+		err = fmt.Errorf("cannot insert un-authenticated document")
+		return
+	}
+
 	// Ensure unique index (only needs to be done once)
 	indexModel := mongo.IndexModel{
 		Keys: bson.M{"user_id": 1}, // Unique on "user_id" field
@@ -60,40 +82,40 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) error {
 			SetUnique(true),
 	}
 
-	_, err := db.collection.Indexes().CreateOne(db.ctx, indexModel)
+	_, err = db.collection.Indexes().CreateOne(db.ctx, indexModel)
 	if err != nil {
-		return fmt.Errorf("failed to create index: %s", err.Error())
+		statusCode = http.StatusInternalServerError
+		err = fmt.Errorf("failed to create index: %s", err.Error())
+		return
 	}
 
 	result, err := db.collection.InsertOne(db.ctx, settings)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			return fmt.Errorf("failed to insert: document already exists")
+			statusCode = http.StatusConflict
+			err = fmt.Errorf("failed to insert: document already exists")
+			return
 		} else {
-			return fmt.Errorf("failed to insert: %s", err.Error())
+			statusCode = http.StatusInternalServerError
+			err = fmt.Errorf("failed to insert: %s", err.Error())
+			return
 		}
 	}
 
 	db.logger.Info("update price settings successfully", zap.Any("updated_id", result.InsertedID))
-	return err
+	return http.StatusCreated, err
 }
 
-// GetPriceSettings retrieves a document by UserID
-func (db Mongo) GetPriceSettings(userID string) (*models.PriceSettings, error) {
-	filter := bson.M{"user_id": userID}
-
-	settings := models.PriceSettings{}
-	if err := db.collection.FindOne(db.ctx, filter).Decode(&settings); err != nil {
-		return nil, fmt.Errorf("failed to get price setting: %s", err.Error())
-	}
-	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))
-	return &settings, nil
-}
-
+// todo: unit test
 // PatchPriceSettings updates partial data for user's price settings.
-func (db Mongo) PatchPriceSettings(settings models.PriceSettings) error {
-	filter := bson.M{"user_id": settings.UserID}
+func (db Mongo) PatchPriceSettings(settings models.PriceSettings) (statusCode int, err error) {
+	if settings.UserID == "" {
+		statusCode = http.StatusUnauthorized
+		err = fmt.Errorf("cannot insert un-authenticated document")
+		return
+	}
 
+	filter := bson.M{"user_id": settings.UserID}
 	updates := bson.M{
 		"$set": bson.M{
 			"vat_included": settings.VatIncluded,
@@ -102,26 +124,35 @@ func (db Mongo) PatchPriceSettings(settings models.PriceSettings) error {
 	}
 	result, err := db.collection.UpdateOne(db.ctx, filter, updates)
 	if err != nil {
-		return fmt.Errorf("failed to update price settings: %s", err.Error())
+		statusCode = http.StatusInternalServerError
+		err = fmt.Errorf("failed to update price settings: %s", err.Error())
+		return
 	}
 	if result.MatchedCount == 0 {
-		return fmt.Errorf("failed to update price settings: no matched settings were found")
+		statusCode = http.StatusNotFound
+		err = fmt.Errorf("failed to update price settings: no matched settings were found")
+		return
 	}
 	db.logger.Info("update price settings successfully", zap.Any("updated_amount", result.MatchedCount))
-	return nil
+	return http.StatusOK, nil
 }
 
+// todo: unit test
 // DeletePriceSettings deletes user's price settings.
-func (db Mongo) DeletePriceSettings(userID string) error {
+func (db Mongo) DeletePriceSettings(userID string) (statusCode int, err error) {
 	filter := bson.M{"user_id": userID}
 
 	result, err := db.collection.DeleteOne(db.ctx, filter)
 	if err != nil {
-		return fmt.Errorf("failed to delete price settings: %s", err.Error())
+		statusCode = http.StatusInternalServerError
+		err = fmt.Errorf("failed to delete price settings: %s", err.Error())
+		return
 	}
 	if result.DeletedCount == 0 {
-		return fmt.Errorf("failed to delete price settings: no matched settings were found")
+		statusCode = http.StatusNotFound
+		err = fmt.Errorf("failed to delete price settings: no matched settings were found")
+		return
 	}
 	db.logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
-	return nil
+	return http.StatusOK, nil
 }
