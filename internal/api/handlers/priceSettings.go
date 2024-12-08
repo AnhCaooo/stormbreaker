@@ -15,7 +15,7 @@ import (
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userid, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusBadRequest)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusBadRequest)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusBadRequest)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusBadRequest)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
