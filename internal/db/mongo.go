@@ -41,10 +41,29 @@ func (db *Mongo) EstablishConnection() (*mongo.Client, error) {
 		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
 	}
 
-	db.collection = client.Database(db.config.Name).Collection(db.config.Collection)
-
+	if err = db.initializeCollection(client); err != nil {
+		return nil, err
+	}
 	db.logger.Info("Successfully connected to database")
 	return client, nil
+}
+
+func (db *Mongo) initializeCollection(client *mongo.Client) error {
+	db.collection = client.Database(db.config.Name).Collection(db.config.Collection)
+
+	// Ensure unique index (only needs to be done once)
+	indexModel := mongo.IndexModel{
+		Keys: bson.M{"user_id": 1}, // Unique on "user_id" field
+		Options: options.Index().
+			SetUnique(true),
+	}
+
+	_, err := db.collection.Indexes().CreateOne(db.ctx, indexModel)
+	if err != nil {
+		return fmt.Errorf("failed to create index while initialize collection: %s", err.Error())
+	}
+
+	return nil
 }
 
 // getURI retrieves URI connection with Mongo image
@@ -72,20 +91,6 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode i
 	if settings.UserID == "" {
 		statusCode = http.StatusUnauthorized
 		err = fmt.Errorf("cannot insert un-authenticated document")
-		return
-	}
-
-	// Ensure unique index (only needs to be done once)
-	indexModel := mongo.IndexModel{
-		Keys: bson.M{"user_id": 1}, // Unique on "user_id" field
-		Options: options.Index().
-			SetUnique(true),
-	}
-
-	_, err = db.collection.Indexes().CreateOne(db.ctx, indexModel)
-	if err != nil {
-		statusCode = http.StatusInternalServerError
-		err = fmt.Errorf("failed to create index: %s", err.Error())
 		return
 	}
 
