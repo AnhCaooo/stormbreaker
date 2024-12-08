@@ -73,6 +73,11 @@ func (db Mongo) getURI() string {
 
 // GetPriceSettings retrieves a document by UserID
 func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings, statusCode int, err error) {
+	if userID == "" {
+		statusCode = http.StatusUnauthorized
+		err = fmt.Errorf("cannot get price settings from unauthenticated user")
+		return
+	}
 	filter := bson.M{"user_id": userID}
 
 	if err = db.collection.FindOne(db.ctx, filter).Decode(settings); err != nil {
@@ -141,6 +146,11 @@ func (db Mongo) PatchPriceSettings(settings models.PriceSettings) (statusCode in
 
 // DeletePriceSettings deletes user's price settings.
 func (db Mongo) DeletePriceSettings(userID string) (statusCode int, err error) {
+	if userID == "" {
+		statusCode = http.StatusUnauthorized
+		err = fmt.Errorf("cannot get price settings from unauthenticated user")
+		return
+	}
 	filter := bson.M{"user_id": userID}
 
 	result, err := db.collection.DeleteOne(db.ctx, filter)
