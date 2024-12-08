@@ -19,14 +19,14 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := h.mongo.GetPriceSettings(userid)
+	settings, statusCode, err := h.mongo.GetPriceSettings(userid)
 	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, settings); err != nil {
+	if err := encode.EncodeResponse(w, statusCode, settings); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
@@ -51,23 +51,19 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Patch userID to price settings
+	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
-	if reqBody.UserID == "" {
-		http.Error(w, "cannot insert un-authenticated document", http.StatusUnauthorized)
-		return
-	}
-
-	if err := h.mongo.InsertPriceSettings(reqBody); err != nil {
+	statusCode, err := h.mongo.InsertPriceSettings(reqBody)
+	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusConflict)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
 	response := map[string]string{
 		"message": "Operation completed successfully",
 	}
-	if err := encode.EncodeResponse(w, http.StatusCreated, response); err != nil {
+	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
@@ -91,15 +87,12 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
-	if reqBody.UserID == "" {
-		http.Error(w, "cannot insert un-authenticated document", http.StatusUnauthorized)
-		return
-	}
-
-	if err := h.mongo.PatchPriceSettings(reqBody); err != nil {
+	statusCode, err := h.mongo.PatchPriceSettings(reqBody)
+	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
@@ -107,7 +100,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		"message": "Operation completed successfully",
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
+	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
@@ -126,9 +119,10 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.mongo.DeletePriceSettings(userId); err != nil {
+	statusCode, err := h.mongo.DeletePriceSettings(userId)
+	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
@@ -136,7 +130,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		"message": "Operation completed successfully",
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, response); err != nil {
+	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
