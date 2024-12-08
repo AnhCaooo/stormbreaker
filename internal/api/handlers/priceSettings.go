@@ -93,13 +93,13 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	reqBody.UserID = userId
 	if reqBody.UserID == "" {
-		http.Error(w, "cannot insert un-authenticated document", http.StatusBadRequest)
+		http.Error(w, "cannot insert un-authenticated document", http.StatusUnauthorized)
 		return
 	}
 
 	if err := h.mongo.PatchPriceSettings(reqBody); err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
