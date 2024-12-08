@@ -54,20 +54,19 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	// Patch userID to price settings
 	reqBody.UserID = userId
 	if reqBody.UserID == "" {
-		http.Error(w, "cannot insert un-authenticated document", http.StatusBadRequest)
+		http.Error(w, "cannot insert un-authenticated document", http.StatusUnauthorized)
 		return
 	}
 
 	if err := h.mongo.InsertPriceSettings(reqBody); err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
 
 	response := map[string]string{
 		"message": "Operation completed successfully",
 	}
-
 	if err := encode.EncodeResponse(w, http.StatusCreated, response); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
