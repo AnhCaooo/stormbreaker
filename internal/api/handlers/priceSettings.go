@@ -22,7 +22,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	settings, err := h.mongo.GetPriceSettings(userid)
 	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("%s failed to encode response body:", constants.Server),
 			zap.Error(err),
 		)
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -128,7 +128,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.mongo.DeletePriceSettings(userId); err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
