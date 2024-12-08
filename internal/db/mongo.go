@@ -71,7 +71,6 @@ func (db Mongo) getURI() string {
 	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", db.config.Username, db.config.Password, db.config.Host, db.config.Port)
 }
 
-// todo: unit test
 // GetPriceSettings retrieves a document by UserID
 func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings, statusCode int, err error) {
 	filter := bson.M{"user_id": userID}
@@ -85,7 +84,6 @@ func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings,
 	return settings, http.StatusOK, nil
 }
 
-// todo: unit test
 // InsertPriceSettings inserts a new document into the PriceSettings collection.
 func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode int, err error) {
 	if settings.UserID == "" {
@@ -111,7 +109,6 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode i
 	return http.StatusCreated, err
 }
 
-// todo: unit test
 // PatchPriceSettings updates partial data for user's price settings.
 func (db Mongo) PatchPriceSettings(settings models.PriceSettings) (statusCode int, err error) {
 	if settings.UserID == "" {
@@ -142,7 +139,6 @@ func (db Mongo) PatchPriceSettings(settings models.PriceSettings) (statusCode in
 	return http.StatusOK, nil
 }
 
-// todo: unit test
 // DeletePriceSettings deletes user's price settings.
 func (db Mongo) DeletePriceSettings(userID string) (statusCode int, err error) {
 	filter := bson.M{"user_id": userID}
