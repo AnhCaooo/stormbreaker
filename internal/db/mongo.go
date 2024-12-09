@@ -78,11 +78,11 @@ func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings,
 		err = fmt.Errorf("cannot get price settings from unauthenticated user")
 		return
 	}
+	settings = &models.PriceSettings{}
 	filter := bson.M{"user_id": userID}
-
 	if err = db.collection.FindOne(db.ctx, filter).Decode(settings); err != nil {
 		statusCode = http.StatusNotFound
-		err = fmt.Errorf("failed to get price setting: %s", err.Error())
+		err = fmt.Errorf("failed to get price settings: %s", err.Error())
 		return
 	}
 	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))

@@ -111,80 +111,86 @@ func TestInsertPriceSettings(t *testing.T) {
 
 func TestGetPriceSettings(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
-	logger := log.InitLogger(zapcore.InfoLevel)
-	ctx := context.TODO()
+	logger := log.InitLogger(zapcore.DebugLevel)
+	ctx := context.Background()
 
 	tests := []struct {
 		name               string
-		userId             string
-		expectedResponse   bson.D
+		userID             string
+		mockResponse       bson.D
+		expectedSettings   *models.PriceSettings
 		expectedStatusCode int
 		expectedError      string
 	}{
-		// {
-		// 	name:   "successful operation/get price settings from valid userid",
-		// 	userId: "12345",
-		// 	expectedResponse: mtest.CreateCursorResponse(
-		// 		1,
-		// 		"price-settings",
-		// 		mtest.FirstBatch,
-		// 		bson.D{
-		// 			{Key: "user_id", Value: "12345"},
-		// 			{Key: "vat_included", Value: true},
-		// 			{Key: "margin", Value: 0.59},
-		// 		},
-		// 	),
-		// 	expectedStatusCode: http.StatusOK,
-		// 	expectedError:      "",
-		// },
 		{
-			name:   "cannot get price settings",
-			userId: "12345",
-			expectedResponse: mtest.CreateCommandErrorResponse(
-				mtest.CommandError{
-					Code:    12345, // Some other error code
-					Message: "some database error",
-				},
-			),
-			expectedStatusCode: http.StatusNotFound,
-			expectedError:      "failed to get price setting: some database error",
+			name:   "successful operation/valid user ID and price settings found",
+			userID: "12345",
+			mockResponse: mtest.CreateCursorResponse(1, "test.price_settings", mtest.FirstBatch, bson.D{
+				{Key: "user_id", Value: "12345"},
+				{Key: "margin", Value: 0.59},
+				{Key: "vat_included", Value: true},
+			}),
+			expectedSettings: &models.PriceSettings{
+				UserID:      "12345",
+				Marginal:    0.59,
+				VatIncluded: true,
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedError:      "",
 		},
 		{
-			name:               "unauthorized insertion/get price settings from empty userid",
-			userId:             "",
-			expectedResponse:   nil,
+			name:               "unauthenticated user/empty user ID",
+			userID:             "",
+			mockResponse:       nil,
+			expectedSettings:   nil,
 			expectedStatusCode: http.StatusUnauthorized,
 			expectedError:      "cannot get price settings from unauthenticated user",
+		},
+		{
+			name:               "price settings not found",
+			userID:             "54321",
+			mockResponse:       mtest.CreateCursorResponse(0, "test.price_settings", mtest.FirstBatch),
+			expectedSettings:   nil,
+			expectedStatusCode: http.StatusNotFound,
+			expectedError:      "failed to get price settings: mongo: no documents in result",
 		},
 	}
 
 	for _, test := range tests {
 		mt.Run(test.name, func(mt *mtest.T) {
-			mockMongo := &Mongo{
-				config:     nil,
-				logger:     logger,
-				ctx:        ctx,
-				collection: mt.Coll,
+			db := NewMongo(ctx, nil, logger)
+			db.collection = mt.Coll
+
+			// Set up mock responses if applicable
+			if test.mockResponse != nil {
+				mt.AddMockResponses(test.mockResponse)
 			}
 
-			// Add mock response if expected
-			if test.expectedResponse != nil {
-				mt.AddMockResponses(test.expectedResponse)
-			}
-
-			// Call the function
-			_, statusCode, err := mockMongo.GetPriceSettings(test.userId)
+			// Call the function being tested
+			settings, statusCode, err := db.GetPriceSettings(test.userID)
 			// Validate error
 			if err != nil && err.Error() != test.expectedError {
-				t.Fatalf("got %q, wanted %q", err.Error(), test.expectedError)
+				t.Errorf("unexpected error: got %q, want %q", err.Error(), test.expectedError)
+			} else if err == nil && test.expectedError != "" {
+				t.Errorf("expected error %q but got nil", test.expectedError)
 			}
 
 			// Validate status code
-			if err == nil && statusCode != test.expectedStatusCode {
-				t.Errorf("got expected status code %d, got %d", test.expectedStatusCode, statusCode)
+			if statusCode != test.expectedStatusCode {
+				t.Errorf("unexpected status code: got %d, want %d", statusCode, test.expectedStatusCode)
+			}
+
+			// Validate settings
+			if settings != nil && test.expectedSettings != nil {
+				if settings != test.expectedSettings {
+					t.Errorf("unexpected settings: got %#v, want %#v", settings, test.expectedSettings)
+				}
+			} else if settings != nil || test.expectedSettings != nil {
+				t.Errorf("expected settings %#v but got %#v", test.expectedSettings, settings)
 			}
 		})
 	}
+
 }
 
 // func TestPatchPriceSettings(t *testing.T) {
