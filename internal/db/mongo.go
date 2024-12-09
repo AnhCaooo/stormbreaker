@@ -81,6 +81,7 @@ func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings,
 	settings = &models.PriceSettings{}
 	filter := bson.M{"user_id": userID}
 	if err = db.collection.FindOne(db.ctx, filter).Decode(settings); err != nil {
+		settings = nil
 		statusCode = http.StatusNotFound
 		err = fmt.Errorf("failed to get price settings: %s", err.Error())
 		return

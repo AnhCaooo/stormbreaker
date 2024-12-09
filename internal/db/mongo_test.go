@@ -4,6 +4,7 @@ package db
 import (
 	"context"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/AnhCaooo/go-goods/log"
@@ -81,12 +82,8 @@ func TestInsertPriceSettings(t *testing.T) {
 
 	for _, test := range tests {
 		mt.Run(test.name, func(mt *mtest.T) {
-			mockMongo := &Mongo{
-				config:     nil,
-				logger:     logger,
-				ctx:        ctx,
-				collection: mt.Coll,
-			}
+			db := NewMongo(ctx, nil, logger)
+			db.collection = mt.Coll
 
 			// Add mock response if expected
 			if test.expectedResponse != nil {
@@ -94,7 +91,7 @@ func TestInsertPriceSettings(t *testing.T) {
 			}
 
 			// Call the function
-			statusCode, err := mockMongo.InsertPriceSettings(test.priceSettings)
+			statusCode, err := db.InsertPriceSettings(test.priceSettings)
 			// Validate error
 			if err != nil && err.Error() != test.expectedError {
 				t.Errorf("got %q, wanted %q", err.Error(), test.expectedError)
@@ -118,7 +115,7 @@ func TestGetPriceSettings(t *testing.T) {
 		name               string
 		userID             string
 		mockResponse       bson.D
-		expectedSettings   *models.PriceSettings
+		expectedSettings   models.PriceSettings
 		expectedStatusCode int
 		expectedError      string
 	}{
@@ -130,7 +127,7 @@ func TestGetPriceSettings(t *testing.T) {
 				{Key: "margin", Value: 0.59},
 				{Key: "vat_included", Value: true},
 			}),
-			expectedSettings: &models.PriceSettings{
+			expectedSettings: models.PriceSettings{
 				UserID:      "12345",
 				Marginal:    0.59,
 				VatIncluded: true,
@@ -142,7 +139,7 @@ func TestGetPriceSettings(t *testing.T) {
 			name:               "unauthenticated user/empty user ID",
 			userID:             "",
 			mockResponse:       nil,
-			expectedSettings:   nil,
+			expectedSettings:   models.PriceSettings{},
 			expectedStatusCode: http.StatusUnauthorized,
 			expectedError:      "cannot get price settings from unauthenticated user",
 		},
@@ -150,7 +147,7 @@ func TestGetPriceSettings(t *testing.T) {
 			name:               "price settings not found",
 			userID:             "54321",
 			mockResponse:       mtest.CreateCursorResponse(0, "test.price_settings", mtest.FirstBatch),
-			expectedSettings:   nil,
+			expectedSettings:   models.PriceSettings{},
 			expectedStatusCode: http.StatusNotFound,
 			expectedError:      "failed to get price settings: mongo: no documents in result",
 		},
@@ -180,13 +177,16 @@ func TestGetPriceSettings(t *testing.T) {
 				t.Errorf("unexpected status code: got %d, want %d", statusCode, test.expectedStatusCode)
 			}
 
-			// Validate settings
-			if settings != nil && test.expectedSettings != nil {
-				if settings != test.expectedSettings {
-					t.Errorf("unexpected settings: got %#v, want %#v", settings, test.expectedSettings)
+			defaultSettings := models.PriceSettings{}
+			// Validate empty settings (if any)
+			if test.expectedSettings == defaultSettings && settings != nil {
+				t.Errorf("expected empty settings: %#v but got: %#v", test.expectedSettings, &settings)
+			}
+			// Validate settings (if any)
+			if test.expectedSettings != defaultSettings && settings != nil {
+				if !reflect.DeepEqual(settings, &test.expectedSettings) {
+					t.Errorf("expected settings: %#v but got: %#v", test.expectedSettings, settings)
 				}
-			} else if settings != nil || test.expectedSettings != nil {
-				t.Errorf("expected settings %#v but got %#v", test.expectedSettings, settings)
 			}
 		})
 	}
