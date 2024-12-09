@@ -29,19 +29,14 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	electric := electric.NewElectric(h.logger, h.mongo, userId)
-	externalData, errorType, err := electric.FetchSpotPrice(&reqBody)
+	externalData, statusCode, err := electric.FetchSpotPrice(&reqBody)
 	if err != nil {
-		if errorType == models.SERVER_ERROR {
-			h.logger.Error(constants.Server, zap.Error(err))
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		h.logger.Error(constants.Client, zap.Error(err))
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(constants.Server, zap.Error(err))
+		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
-	if err := encode.EncodeResponse(w, http.StatusOK, externalData); err != nil {
+	if err := encode.EncodeResponse(w, statusCode, externalData); err != nil {
 		h.logger.Error(
 			fmt.Sprintf("%s failed to encode data from external source", constants.Server),
 			zap.Error(err),
