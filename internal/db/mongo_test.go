@@ -109,7 +109,7 @@ func TestInsertPriceSettings(t *testing.T) {
 func TestGetPriceSettings(t *testing.T) {
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 	logger := log.InitLogger(zapcore.DebugLevel)
-	ctx := context.Background()
+	ctx := context.TODO()
 
 	tests := []struct {
 		name               string
@@ -193,44 +193,48 @@ func TestGetPriceSettings(t *testing.T) {
 
 }
 
-// func TestPatchPriceSettings(t *testing.T) {
-// 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
-// 	defer mt.Client.Disconnect(context.Background())
+func TestPatchPriceSettings(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+	logger := log.InitLogger(zapcore.DebugLevel)
+	ctx := context.TODO()
 
-// 	tests := []struct {
-// 		name string
-// 	}{
-// 		{name: "update price settings with valid struct"},
-// 		{name: "update price settings with invalid userid (userid is empty)"},
-// 		{name: "update price settings with invalid userid (userid does not exist)"},
-// 		{name: "update price settings with invalid struct"},
-// 		{name: "update price settings with same struct"},
-// 	}
+	tests := []struct {
+		name string
+	}{
+		{name: "update price settings with valid struct"},
+		{name: "update price settings with invalid userid (userid is empty)"},
+		{name: "update price settings with invalid userid (userid does not exist)"},
+		{name: "update price settings with invalid struct"},
+		{name: "update price settings with same struct"},
+	}
 
-// 	for _, test := range tests {
-// 		mt.Run(test.name, func(mt *mtest.T) {
+	for _, test := range tests {
+		mt.Run(test.name, func(mt *mtest.T) {
+			db := NewMongo(ctx, nil, logger)
+			db.collection = mt.Coll
+		})
+	}
 
-// 		})
-// 	}
+}
 
-// }
+func TestDeletePriceSettings(t *testing.T) {
+	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+	logger := log.InitLogger(zapcore.DebugLevel)
+	ctx := context.TODO()
 
-// func TestDeletePriceSettings(t *testing.T) {
-// 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
-// 	defer mt.Client.Disconnect(context.Background())
+	tests := []struct {
+		name string
+	}{
+		{name: "delete price settings with valid userid"},
+		{name: "delete non-existing price settings"},
+		{name: "delete price settings with invalid userid"},
+	}
 
-// 	tests := []struct {
-// 		name string
-// 	}{
-// 		{name: "delete price settings with valid userid"},
-// 		{name: "delete non-existing price settings"},
-// 		{name: "delete price settings with invalid userid"},
-// 	}
+	for _, test := range tests {
+		mt.Run(test.name, func(mt *mtest.T) {
+			db := NewMongo(ctx, nil, logger)
+			db.collection = mt.Coll
+		})
+	}
 
-// 	for _, test := range tests {
-// 		mt.Run(test.name, func(mt *mtest.T) {
-
-// 		})
-// 	}
-
-// }
+}
