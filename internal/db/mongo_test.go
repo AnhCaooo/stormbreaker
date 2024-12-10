@@ -11,7 +11,6 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -202,27 +201,25 @@ func TestPatchPriceSettings(t *testing.T) {
 	tests := []struct {
 		name               string
 		priceSettings      models.PriceSettings
-		mockDataRequired   bool
 		mockResponse       bson.D
 		expectedStatusCode int
 		expectedError      string
 	}{
-		// {
-		// 	name: "successful update: valid user ID and updated fields",
-		// 	priceSettings: models.PriceSettings{
-		// 		UserID:      "12345",
-		// 		Marginal:    0.75,
-		// 		VatIncluded: true,
-		// 	},
-		// 	mockDataRequired: true,
-		// 	mockResponse: bson.D{
-		// 		{Key: "ok", Value: 1},
-		// 		{Key: "nModified", Value: 1},
-		// 		{Key: "matchedCount", Value: 1},
-		// 	},
-		// 	expectedStatusCode: http.StatusOK,
-		// 	expectedError:      "",
-		// },
+		{
+			name: "successful update: valid user ID and updated fields",
+			priceSettings: models.PriceSettings{
+				UserID:      "12345",
+				Marginal:    0.75,
+				VatIncluded: true,
+			},
+			mockResponse: bson.D{
+				{Key: "n", Value: 1},         // Number of matched documents
+				{Key: "nModified", Value: 1}, // Number of modified documents
+				{Key: "ok", Value: 1},
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedError:      "",
+		},
 		{
 			name: "unauthorized operation: empty user ID",
 			priceSettings: models.PriceSettings{
@@ -230,7 +227,6 @@ func TestPatchPriceSettings(t *testing.T) {
 				Marginal:    0.75,
 				VatIncluded: true,
 			},
-			mockDataRequired:   false,
 			mockResponse:       nil,
 			expectedStatusCode: http.StatusUnauthorized,
 			expectedError:      "cannot insert un-authenticated document",
@@ -242,7 +238,6 @@ func TestPatchPriceSettings(t *testing.T) {
 				Marginal:    0.85,
 				VatIncluded: false,
 			},
-			mockDataRequired: false,
 			mockResponse: bson.D{
 				{Key: "ok", Value: 1},
 				{Key: "nModified", Value: 0},
@@ -258,7 +253,6 @@ func TestPatchPriceSettings(t *testing.T) {
 				Marginal:    0.75,
 				VatIncluded: true,
 			},
-			mockDataRequired: false,
 			mockResponse: mtest.CreateCommandErrorResponse(mtest.CommandError{
 				Code:    12345,
 				Message: "some database error",
@@ -274,42 +268,29 @@ func TestPatchPriceSettings(t *testing.T) {
 			db := NewMongo(ctx, nil, logger)
 			db.collection = mt.Coll
 
-			// Set up mock data if necessary
-			if test.mockDataRequired == true {
-				mockDoc := bson.D{
-					{Key: "user_id", Value: "12345"},
-					{Key: "vat_included", Value: false},
-					{Key: "margin", Value: 0.5},
-				}
-				mt.AddMockResponses(
-					mtest.CreateSuccessResponse(),
-				)
+			// Set up mock responses
+			mt.AddMockResponses(test.mockResponse)
 
-				result, err := db.collection.InsertOne(db.ctx, mockDoc)
-				if err != nil {
-					t.Fatalf("failed to insert: %v", err)
-				}
-				db.logger.Debug("Inserted document successfully in unit test", zap.Any("inserted_id", result.InsertedID))
-			}
-
-			// Add mock responses
-			if test.mockResponse != nil {
-				mt.AddMockResponses(test.mockResponse)
-			}
-
-			// Call the function under test
+			// Call the PatchPriceSettings function
 			statusCode, err := db.PatchPriceSettings(test.priceSettings)
 
-			// Validate error message
-			if err != nil && err.Error() != test.expectedError {
-				t.Errorf("got error %q, wanted %q", err.Error(), test.expectedError)
+			// Validate error
+			if test.expectedError != "" {
+				if err == nil {
+					t.Errorf("expected error %q, got nil", test.expectedError)
+				} else if err.Error() != test.expectedError {
+					t.Errorf("unexpected error: got %q, want %q", err.Error(), test.expectedError)
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 
 			// Validate status code
 			if statusCode != test.expectedStatusCode {
-				t.Errorf("expected status code %d, got %d", test.expectedStatusCode, statusCode)
+				t.Errorf("unexpected status code: got %d, want %d", statusCode, test.expectedStatusCode)
 			}
 		})
+
 	}
 }
 
@@ -325,15 +306,16 @@ func TestDeletePriceSettings(t *testing.T) {
 		expectedStatusCode int
 		expectedError      string
 	}{
-		// {
-		// 	name:   "successful deletion",
-		// 	userID: "12345",
-		// 	mockResponse: bson.D{
-		// 		{Key: "ok", Value: 1}, {Key: "acknowledged", Value: true}, {Key: "n", Value: 0},
-		// 	},
-		// 	expectedStatusCode: http.StatusOK,
-		// 	expectedError:      "",
-		// },
+		{
+			name:   "successful deletion",
+			userID: "12345",
+			mockResponse: bson.D{
+				{Key: "ok", Value: 1},
+				{Key: "n", Value: 1}, // Number of documents deleted
+			},
+			expectedStatusCode: http.StatusOK,
+			expectedError:      "",
+		},
 		{
 			name:               "empty user ID",
 			userID:             "",
@@ -342,20 +324,15 @@ func TestDeletePriceSettings(t *testing.T) {
 			expectedError:      "cannot get price settings from unauthenticated user",
 		},
 		{
-			name:   "no settings found",
-			userID: "54321",
+			name:   "no matched documents: user ID not found",
+			userID: "99999",
 			mockResponse: bson.D{
-				{Key: "ok", Value: 1}, {Key: "acknowledged", Value: true}, {Key: "n", Value: 0}},
+				{Key: "ok", Value: 1},
+				{Key: "n", Value: 0}, // No documents deleted
+			},
 			expectedStatusCode: http.StatusNotFound,
 			expectedError:      "failed to delete price settings: no matched settings were found",
 		},
-		// {
-		// 	name:               "internal server error",
-		// 	userID:             "7890",
-		// 	mockResponse:       fmt.Errorf("some database error"),
-		// 	expectedStatusCode: http.StatusInternalServerError,
-		// 	expectedError:      "failed to delete price settings: some database error",
-		// },
 	}
 
 	for _, test := range tests {
@@ -363,16 +340,21 @@ func TestDeletePriceSettings(t *testing.T) {
 			db := NewMongo(ctx, nil, logger)
 			db.collection = mt.Coll
 
-			mt.AddMockResponses(test.mockResponse)
-
+			if test.mockResponse != nil {
+				mt.AddMockResponses(test.mockResponse)
+			}
 			// Call the function being tested
 			statusCode, err := db.DeletePriceSettings(test.userID)
 
 			// Validate error
-			if err != nil && err.Error() != test.expectedError {
-				t.Errorf("unexpected error: got %q, want %q", err.Error(), test.expectedError)
-			} else if err == nil && test.expectedError != "" {
-				t.Errorf("expected error %q but got nil", test.expectedError)
+			if test.expectedError != "" {
+				if err == nil {
+					t.Errorf("expected error %q, got nil", test.expectedError)
+				} else if err.Error() != test.expectedError {
+					t.Errorf("unexpected error: got %q, want %q", err.Error(), test.expectedError)
+				}
+			} else if err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 
 			// Validate status code
