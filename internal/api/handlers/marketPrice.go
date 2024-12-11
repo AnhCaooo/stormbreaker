@@ -13,7 +13,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// Fetch the market spot price of electric in Finland in any times
+// PostMarketPrice godoc
+//
+//	@Summary		Retrieves the market price
+//	@Description	Fetch the market spot price of electric in Finland in any times
+//	@Tags			market-price
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.PriceRequest
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/market-price [post]
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -48,9 +59,6 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("get market price of electric successfully")
 }
 
-// Fetch and return the exchange price for today and tomorrow.
-// If tomorrow's price is not available yet, return empty struct.
-// Then client needs to show readable information to indicate that data is not available yet.
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {

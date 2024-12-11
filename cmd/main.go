@@ -11,21 +11,24 @@ import (
 	"time"
 
 	"github.com/AnhCaooo/go-goods/log"
+	_ "github.com/AnhCaooo/stormbreaker/docs"
 	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
 	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
-	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func initializeRouter(handler *handlers.Handler, middleware *middleware.Middleware, endpoints []routes.Endpoint) *mux.Router {
 	r := mux.NewRouter()
+
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 	// Apply middlewares
 	middlewares := []func(http.Handler) http.Handler{
 		middleware.Logger,
@@ -83,10 +86,16 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.
 	logger.Info("Server exited gracefully")
 }
 
-// todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
-// and update the value when tomorrow price is available. Maybe have a service
-// to listen and notify when the price is available. New service will also benefit for
-// notifications service
+//	@title			Stormbreaker API (electric service)
+//	@version		1.0.0
+//	@description	Service for retrieving information about market electric price in Finland
+//	@termsOfService	http://swagger.io/terms/
+
+//	@contact.name	Anh Cao
+//	@contact.email	anhcao4922@gmail.com
+
+// @host		localhost:5001
+// @BasePath	/
 func main() {
 	ctx := context.Background()
 
@@ -105,17 +114,17 @@ func main() {
 	// Initialize resources: cache, database
 	cache := cache.NewCache(logger)
 	// Initialize database connection
-	mongo := db.NewMongo(ctx, &configuration.Database, logger)
-	mongoClient, err := mongo.EstablishConnection()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer mongoClient.Disconnect(ctx)
+	// mongo := db.NewMongo(ctx, &configuration.Database, logger)
+	// mongoClient, err := mongo.EstablishConnection()
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
+	// defer mongoClient.Disconnect(ctx)
 
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(logger, configuration)
 	// Initialize Handler
-	handler := handlers.NewHandler(logger, cache, mongo)
+	handler := handlers.NewHandler(logger, cache, nil)
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
 

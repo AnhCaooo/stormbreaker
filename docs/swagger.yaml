@@ -1,0 +1,54 @@
+basePath: /
+definitions:
+  models.PriceRequest:
+    properties:
+      compare_to_last_year:
+        description: CompareToLastYear is allowed to equal to "0" and "1"
+        type: integer
+      endtime:
+        description: EndDate has to be in this format "YYYY-MM-DD"
+        type: string
+      group:
+        type: string
+      starttime:
+        description: StartDate has to be in this format "YYYY-MM-DD"
+        type: string
+    type: object
+host: localhost:5001
+info:
+  contact:
+    email: anhcao4922@gmail.com
+    name: Anh Cao
+  description: Service for retrieving information about market electric price in Finland
+  termsOfService: http://swagger.io/terms/
+  title: Stormbreaker API (electric service)
+  version: 1.0.0
+paths:
+  /market-price:
+    post:
+      consumes:
+      - application/json
+      description: Fetch the market spot price of electric in Finland in any times
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PriceRequest'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Retrieves the market price
+      tags:
+      - market-price
+swagger: "2.0"
