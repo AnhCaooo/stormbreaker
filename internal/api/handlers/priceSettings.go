@@ -59,6 +59,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 //	@Success		200	{object}	string
 //	@Failure		400	{object}	string "Invalid request"
 //	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		403	{object}	string "Forbidden"
 //	@Failure		404	{object}	string "Settings not found"
 //	@Failure		409	{object}	string "Settings exist already"
 //	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
@@ -76,6 +77,13 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if reqBody.UserID != "" && reqBody.UserID != userId {
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token` %s", reqBody.UserID, userId)
+		h.logger.Error(constants.Client, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusForbidden)
+	}
+
 	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.InsertPriceSettings(reqBody)
@@ -109,6 +117,7 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 //	@Success		200	{object}	string
 //	@Failure		400	{object}	string "Invalid request"
 //	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		403	{object}	string "Forbidden"
 //	@Failure		404	{object}	string "Settings not found"
 //	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [patch]
@@ -125,6 +134,13 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if reqBody.UserID != "" && reqBody.UserID != userId {
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token` %s", reqBody.UserID, userId)
+		h.logger.Error(constants.Client, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusForbidden)
+	}
+
 	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.PatchPriceSettings(reqBody)

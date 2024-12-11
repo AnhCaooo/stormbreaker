@@ -60,7 +60,7 @@ type DailyPrice struct {
 
 // PriceSettings represents the schema for the PriceSettings collection
 type PriceSettings struct {
-	UserID      string  `bson:"user_id" json:"user_id" example:"123456789"`      // id of the user
+	UserID      string  `bson:"user_id" json:"user_id" example:"123456789"`      // id of the user. When sends as request, the clients (web, mobile) does not need to provide `user_id` because the service will read through `access_token`.
 	VatIncluded bool    `bson:"vat_included" json:"vat_included" example:"true"` // indicates whether tax is included to price stats or not
 	Marginal    float64 `bson:"margin" json:"margin" example:"0.59"`             // amount of margin applied to price stats
 }
