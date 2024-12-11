@@ -79,9 +79,10 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if reqBody.UserID != "" && reqBody.UserID != userId {
-		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token` %s", reqBody.UserID, userId)
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
 		h.logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusForbidden)
+		return
 	}
 
 	// Patch userID from accessToken to price settings struct
@@ -136,9 +137,10 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if reqBody.UserID != "" && reqBody.UserID != userId {
-		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token` %s", reqBody.UserID, userId)
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
 		h.logger.Error(constants.Client, zap.Error(err))
 		http.Error(w, err.Error(), http.StatusForbidden)
+		return
 	}
 
 	// Patch userID from accessToken to price settings struct
