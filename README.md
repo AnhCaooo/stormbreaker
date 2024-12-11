@@ -24,8 +24,10 @@ This command will give you total control of all libraries which are used in this
 
 3. Run the application
 **Note** This service is having authentication handling in middleware layer. 
+
 #### Run the service with database connection 
-**Note**: Because this service is required database connection in order to get user's settings for electric price. So you need to have a database connection which is [MongoDB](mongodb.com).  and 1 way for quick verify (no need for db connection):
+
+**Note**: Because this service is required database connection in order to get user's settings for electric price. So you need to have a database connection which is [MongoDB](mongodb.com).
 
 3.1 Follow and setup your own config file based on config template which is located in following directory: `./internal/config/config.template.yml`
 
