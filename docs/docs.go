@@ -32,6 +32,17 @@ const docTemplate = `{
                     "market-price"
                 ],
                 "summary": "Retrieves the market price",
+                "parameters": [
+                    {
+                        "description": "Criteria for getting market spot price",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PriceRequest"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -40,19 +51,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
                         "schema": {
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -62,7 +73,7 @@ const docTemplate = `{
         },
         "/v1/market-price/today-tomorrow": {
             "get": {
-                "description": "Returns the exchange price for today and tomorrow.\nIf tomorrow's price is not available yet, return empty struct.\nThen client needs to show readable information to indicate that data is not available yet.",
+                "description": "Returns the exchange price for today and tomorrow.\nIf tomorrow price is not available yet, return empty struct.\nThen client needs to show readable information to indicate that data is not available yet.",
                 "consumes": [
                     "application/json"
                 ],
@@ -80,20 +91,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.TodayTomorrowPrice"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -277,25 +282,42 @@ const docTemplate = `{
             "properties": {
                 "includeVat": {
                     "description": "IncludeVat is legacy property that return string value and value \"0\" means no VAT included and string \"1\" is included",
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ],
+                    "example": "1"
                 },
                 "isToday": {
-                    "type": "boolean"
+                    "description": "IsToday indicates whether the current time is today or not",
+                    "type": "boolean",
+                    "example": false
                 },
                 "orig_time": {
-                    "type": "string"
+                    "description": "the current time where server is located",
+                    "type": "string",
+                    "example": "2024-12-09 00:00:00"
                 },
                 "price": {
-                    "type": "number"
+                    "description": "the price of specified time range",
+                    "type": "number",
+                    "example": 2.47
                 },
                 "time": {
-                    "type": "string"
+                    "description": "the current time.",
+                    "type": "string",
+                    "example": "2024-12-09 00:00:00"
                 },
                 "time_utc": {
-                    "type": "string"
+                    "description": "timestamp in UTC format",
+                    "type": "string",
+                    "example": "2024-12-08 22:00:00"
                 },
                 "vat_factor": {
-                    "type": "number"
+                    "description": "amount of VAT that applies to electric price.",
+                    "type": "number",
+                    "example": 1.255
                 }
             }
         },
@@ -311,6 +333,41 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.PriceSeries"
                     }
+                }
+            }
+        },
+        "models.PriceRequest": {
+            "type": "object",
+            "properties": {
+                "compare_to_last_year": {
+                    "description": "CompareToLastYear is allowed to equal to \"0\" and \"1\"",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ],
+                    "example": 0
+                },
+                "endtime": {
+                    "description": "EndDate has to be in this format \"YYYY-MM-DD\"",
+                    "type": "string",
+                    "example": "2024-12-31"
+                },
+                "group": {
+                    "type": "string",
+                    "enum": [
+                        "hour",
+                        "day",
+                        "week",
+                        "month",
+                        "year"
+                    ],
+                    "example": "hour"
+                },
+                "starttime": {
+                    "description": "StartDate has to be in this format \"YYYY-MM-DD\"",
+                    "type": "string",
+                    "example": "2024-12-11"
                 }
             }
         },
@@ -335,7 +392,9 @@ const docTemplate = `{
                     }
                 },
                 "name": {
-                    "type": "string"
+                    "description": "unit of electric price",
+                    "type": "string",
+                    "example": "c/kWh"
                 }
             }
         },
@@ -343,13 +402,19 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "margin": {
-                    "type": "number"
+                    "description": "amount of margin applied to price stats",
+                    "type": "number",
+                    "example": 0.59
                 },
                 "user_id": {
-                    "type": "string"
+                    "description": "id of the user",
+                    "type": "string",
+                    "example": "123456789"
                 },
                 "vat_included": {
-                    "type": "boolean"
+                    "description": "indicates whether tax is included to price stats or not",
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
