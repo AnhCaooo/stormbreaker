@@ -9,7 +9,6 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "Anh Cao",
             "email": "anhcao4922@gmail.com"
@@ -63,7 +62,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -98,7 +97,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -127,19 +126,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
                         "schema": {
                             "type": "string"
                         }
                     },
-                    "404": {
-                        "description": "Not Found",
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -158,6 +157,17 @@ const docTemplate = `{
                     "price-settings"
                 ],
                 "summary": "Creates a new price settings for user",
+                "parameters": [
+                    {
+                        "description": "user price settings",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PriceSettings"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -166,19 +176,31 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Settings not found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "409": {
+                        "description": "Settings exist already",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -205,19 +227,25 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Settings not found",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -236,6 +264,17 @@ const docTemplate = `{
                     "price-settings"
                 ],
                 "summary": "Updates the price settings for specific user",
+                "parameters": [
+                    {
+                        "description": "user price settings",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PriceSettings"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -244,19 +283,25 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated/Unauthorized",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Settings not found",
                         "schema": {
                             "type": "string"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc.",
                         "schema": {
                             "type": "string"
                         }
@@ -439,7 +484,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Stormbreaker API (electric service)",
-	Description:      "Service for retrieving information about market electric price in Finland",
+	Description:      "Service for retrieving information about market electric price in Finland.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

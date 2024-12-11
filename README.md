@@ -30,6 +30,7 @@ This command will give you total control of all libraries which are used in this
 3.1 Follow and setup your own config file based on config template which is located in following directory: `./internal/config/config.template.yml`
 
 After the first step, there are 2 ways to run this applications with full functionalities (3.2 or 3.3). Please your database configuration needs to be same as the configuration file. 
+
 3.2. [Highly recommended] Run this service and Mongodb as Docker containers by taking [Docker Compose](https://docs.docker.com/compose/) into use. 
 
 3.3 you can just build 2 docker images -> [create a docker network connection](#create-docker-network) -> apply network for those 2 containers

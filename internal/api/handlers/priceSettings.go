@@ -19,9 +19,9 @@ import (
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	models.PriceSettings
-//	@Failure		400	{object}	string
-//	@Failure		404	{object}	string
-//	@Failure		500	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [get]
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userid, ok := r.Context().Value(constants.UserIdKey).(string)
@@ -55,10 +55,13 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 //	@Tags			price-settings
 //	@Accept			json
 //	@Produce		json
+//	@Param			payload	body		models.PriceSettings	true	"user price settings"
 //	@Success		200	{object}	string
-//	@Failure		400	{object}	string
-//	@Failure		404	{object}	string
-//	@Failure		500	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		409	{object}	string "Settings exist already"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [post]
 func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
@@ -102,10 +105,12 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 //	@Tags			price-settings
 //	@Accept			json
 //	@Produce		json
+//	@Param			payload	body		models.PriceSettings	true	"user price settings"
 //	@Success		200	{object}	string
-//	@Failure		400	{object}	string
-//	@Failure		404	{object}	string
-//	@Failure		500	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [patch]
 func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
@@ -152,9 +157,10 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	string
-//	@Failure		400	{object}	string
-//	@Failure		404	{object}	string
-//	@Failure		500	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [delete]
 func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)

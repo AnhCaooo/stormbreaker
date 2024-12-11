@@ -24,7 +24,7 @@ import (
 //	@Success		200	{object}	models.PriceResponse
 //	@Failure		400	{string}	string "Invalid request"
 //	@Failure		401	{string}	string "Unauthenticated/Unauthorized"
-//	@Failure		500	{string}	string "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/market-price [post]
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
@@ -73,7 +73,7 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 //	@Produce		json
 //	@Success		200	{object}	models.TodayTomorrowPrice
 //	@Failure		401	{string}	string "Unauthenticated/Unauthorized"
-//	@Failure		500	{string}	string "various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/market-price/today-tomorrow [get]
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)

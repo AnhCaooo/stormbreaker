@@ -124,8 +124,7 @@ info:
   contact:
     email: anhcao4922@gmail.com
     name: Anh Cao
-  description: Service for retrieving information about market electric price in Finland
-  termsOfService: http://swagger.io/terms/
+  description: Service for retrieving information about market electric price in Finland.
   title: Stormbreaker API (electric service)
   version: 1.0.0
 paths:
@@ -157,7 +156,7 @@ paths:
           schema:
             type: string
         "500":
-          description: 'various reasons: cannot fetch price from 3rd party, failed
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
             to read settings from db, etc.'
           schema:
             type: string
@@ -184,7 +183,7 @@ paths:
           schema:
             type: string
         "500":
-          description: 'various reasons: cannot fetch price from 3rd party, failed
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
             to read settings from db, etc.'
           schema:
             type: string
@@ -205,15 +204,20 @@ paths:
           schema:
             type: string
         "400":
-          description: Bad Request
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
           schema:
             type: string
         "404":
-          description: Not Found
+          description: Settings not found
           schema:
             type: string
         "500":
-          description: Internal Server Error
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
           schema:
             type: string
       summary: Deletes the price settings for specific user
@@ -232,15 +236,16 @@ paths:
           schema:
             $ref: '#/definitions/models.PriceSettings'
         "400":
-          description: Bad Request
+          description: Invalid request
           schema:
             type: string
-        "404":
-          description: Not Found
+        "401":
+          description: Unauthenticated/Unauthorized
           schema:
             type: string
         "500":
-          description: Internal Server Error
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
           schema:
             type: string
       summary: Retrieves the price settings for specific user
@@ -251,6 +256,13 @@ paths:
       - application/json
       description: Updates the price settings for specific user by identify through
         'access token'.
+      parameters:
+      - description: user price settings
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/models.PriceSettings'
       produces:
       - application/json
       responses:
@@ -259,15 +271,20 @@ paths:
           schema:
             type: string
         "400":
-          description: Bad Request
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
           schema:
             type: string
         "404":
-          description: Not Found
+          description: Settings not found
           schema:
             type: string
         "500":
-          description: Internal Server Error
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
           schema:
             type: string
       summary: Updates the price settings for specific user
@@ -278,6 +295,13 @@ paths:
       - application/json
       description: Creates a new price settings for new user by identify through 'access
         token'.
+      parameters:
+      - description: user price settings
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/models.PriceSettings'
       produces:
       - application/json
       responses:
@@ -286,15 +310,24 @@ paths:
           schema:
             type: string
         "400":
-          description: Bad Request
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
           schema:
             type: string
         "404":
-          description: Not Found
+          description: Settings not found
+          schema:
+            type: string
+        "409":
+          description: Settings exist already
           schema:
             type: string
         "500":
-          description: Internal Server Error
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
           schema:
             type: string
       summary: Creates a new price settings for user
