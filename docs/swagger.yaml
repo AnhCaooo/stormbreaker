@@ -1,0 +1,336 @@
+basePath: /
+definitions:
+  models.DailyPrice:
+    properties:
+      available:
+        type: boolean
+      prices:
+        $ref: '#/definitions/models.PriceSeries'
+    type: object
+  models.Data:
+    properties:
+      includeVat:
+        description: IncludeVat is legacy property that return string value and value
+          "0" means no VAT included and string "1" is included
+        enum:
+        - "0"
+        - "1"
+        example: "1"
+        type: string
+      isToday:
+        description: IsToday indicates whether the current time is today or not
+        example: false
+        type: boolean
+      orig_time:
+        description: the current time where server is located
+        example: "2024-12-09 00:00:00"
+        type: string
+      price:
+        description: the price of specified time range
+        example: 2.47
+        type: number
+      time:
+        description: the current time.
+        example: "2024-12-09 00:00:00"
+        type: string
+      time_utc:
+        description: timestamp in UTC format
+        example: "2024-12-08 22:00:00"
+        type: string
+      vat_factor:
+        description: amount of VAT that applies to electric price.
+        example: 1.255
+        type: number
+    type: object
+  models.PriceData:
+    properties:
+      group:
+        description: Group represents 'hour', 'day', 'week', 'month', 'year'
+        type: string
+      series:
+        items:
+          $ref: '#/definitions/models.PriceSeries'
+        type: array
+    type: object
+  models.PriceRequest:
+    properties:
+      compare_to_last_year:
+        description: CompareToLastYear is allowed to equal to "0" and "1"
+        enum:
+        - 0
+        - 1
+        example: 0
+        type: integer
+      endtime:
+        description: EndDate has to be in this format "YYYY-MM-DD"
+        example: "2024-12-31"
+        type: string
+      group:
+        enum:
+        - hour
+        - day
+        - week
+        - month
+        - year
+        example: hour
+        type: string
+      starttime:
+        description: StartDate has to be in this format "YYYY-MM-DD"
+        example: "2024-12-11"
+        type: string
+    type: object
+  models.PriceResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.PriceData'
+      status:
+        type: string
+    type: object
+  models.PriceSeries:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Data'
+        type: array
+      name:
+        description: unit of electric price
+        example: c/kWh
+        type: string
+    type: object
+  models.PriceSettings:
+    properties:
+      margin:
+        description: amount of margin applied to price stats
+        example: 0.59
+        type: number
+      user_id:
+        description: id of the user
+        example: "123456789"
+        type: string
+      vat_included:
+        description: indicates whether tax is included to price stats or not
+        example: true
+        type: boolean
+    type: object
+  models.TodayTomorrowPrice:
+    properties:
+      today:
+        $ref: '#/definitions/models.DailyPrice'
+      tomorrow:
+        $ref: '#/definitions/models.DailyPrice'
+    type: object
+host: localhost:5001
+info:
+  contact:
+    email: anhcao4922@gmail.com
+    name: Anh Cao
+  description: Service for retrieving information about market electric price in Finland.
+  title: Stormbreaker API (electric service)
+  version: 1.0.0
+paths:
+  /v1/market-price:
+    post:
+      consumes:
+      - application/json
+      description: Fetch the market spot price of electric in Finland in any times
+      parameters:
+      - description: Criteria for getting market spot price
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/models.PriceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PriceResponse'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Retrieves the market price
+      tags:
+      - market-price
+  /v1/market-price/today-tomorrow:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Returns the exchange price for today and tomorrow.
+        If tomorrow price is not available yet, return empty struct.
+        Then client needs to show readable information to indicate that data is not available yet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TodayTomorrowPrice'
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Retrieves the market price for today and tomorrow
+      tags:
+      - market-price
+  /v1/price-settings:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the price settings for specific user by identify through
+        'access token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Settings not found
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Deletes the price settings for specific user
+      tags:
+      - price-settings
+    get:
+      consumes:
+      - application/json
+      description: retrieves the price settings for specific user by identify through
+        'access token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PriceSettings'
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Retrieves the price settings for specific user
+      tags:
+      - price-settings
+    patch:
+      consumes:
+      - application/json
+      description: Updates the price settings for specific user by identify through
+        'access token'.
+      parameters:
+      - description: user price settings
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/models.PriceSettings'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Settings not found
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Updates the price settings for specific user
+      tags:
+      - price-settings
+    post:
+      consumes:
+      - application/json
+      description: Creates a new price settings for new user by identify through 'access
+        token'.
+      parameters:
+      - description: user price settings
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/models.PriceSettings'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Invalid request
+          schema:
+            type: string
+        "401":
+          description: Unauthenticated/Unauthorized
+          schema:
+            type: string
+        "404":
+          description: Settings not found
+          schema:
+            type: string
+        "409":
+          description: Settings exist already
+          schema:
+            type: string
+        "500":
+          description: 'Various reasons: cannot fetch price from 3rd party, failed
+            to read settings from db, etc.'
+          schema:
+            type: string
+      summary: Creates a new price settings for user
+      tags:
+      - price-settings
+swagger: "2.0"

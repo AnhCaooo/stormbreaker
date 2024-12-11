@@ -11,7 +11,18 @@ import (
 )
 
 // todo: cache the price settings to improve performance
-// GetPriceSettings retrieves the price settings for specified user
+// GetPriceSettings retrieves the price settings for specific user
+//
+//	@Summary		Retrieves the price settings for specific user
+//	@Description	retrieves the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.PriceSettings
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/price-settings [get]
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userid, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -37,7 +48,22 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// CreatePriceSettings creates a new price settings for new user
+// CreatePriceSettings creates a new price settings for user
+//
+//	@Summary		Creates a new price settings for user
+//	@Description	Creates a new price settings for new user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		models.PriceSettings	true	"user price settings"
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		403	{object}	string "Forbidden"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		409	{object}	string "Settings exist already"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/price-settings [post]
 func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -51,6 +77,14 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if reqBody.UserID != "" && reqBody.UserID != userId {
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
+		h.logger.Error(constants.Client, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.InsertPriceSettings(reqBody)
@@ -74,6 +108,20 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // PatchPriceSettings updates the price settings for specified user
+//
+//	@Summary		Updates the price settings for specific user
+//	@Description	Updates the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		models.PriceSettings	true	"user price settings"
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		403	{object}	string "Forbidden"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/price-settings [patch]
 func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -87,6 +135,14 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	if reqBody.UserID != "" && reqBody.UserID != userId {
+		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
+		h.logger.Error(constants.Client, zap.Error(err))
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+
 	// Patch userID from accessToken to price settings struct
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.PatchPriceSettings(reqBody)
@@ -112,6 +168,18 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 // todo: maybe only Admin can perform this action? (to be considered)
 // DeletePriceSettings deletes the price settings when user was deleted or removed
+//
+//	@Summary		Deletes the price settings for specific user
+//	@Description	Deletes the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string "Invalid request"
+//	@Failure		401	{object}	string "Unauthenticated/Unauthorized"
+//	@Failure		404	{object}	string "Settings not found"
+//	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/price-settings [delete]
 func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {

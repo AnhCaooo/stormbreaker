@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AnhCaooo/go-goods/log"
+	_ "github.com/AnhCaooo/stormbreaker/docs"
 	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
 	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
 	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
@@ -20,12 +21,17 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func initializeRouter(handler *handlers.Handler, middleware *middleware.Middleware, endpoints []routes.Endpoint) *mux.Router {
 	r := mux.NewRouter()
+
+	// add swagger endpoint for API documentation
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
 	// Apply middlewares
 	middlewares := []func(http.Handler) http.Handler{
 		middleware.Logger,
@@ -83,10 +89,15 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.
 	logger.Info("Server exited gracefully")
 }
 
-// todo: cache today-tomorrow price which means once the service starts, fetch and cache electric price
-// and update the value when tomorrow price is available. Maybe have a service
-// to listen and notify when the price is available. New service will also benefit for
-// notifications service
+//	@title			Stormbreaker API (electric service)
+//	@version		1.0.0
+//	@description	Service for retrieving information about market electric price in Finland.
+
+//	@contact.name	Anh Cao
+//	@contact.email	anhcao4922@gmail.com
+
+// @host		localhost:5001
+// @BasePath	/
 func main() {
 	ctx := context.Background()
 

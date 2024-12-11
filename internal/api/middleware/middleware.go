@@ -27,6 +27,10 @@ func NewMiddleware(logger *zap.Logger, config *models.Config) *Middleware {
 // log the coming request to the server
 func (m *Middleware) Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/swagger/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		m.logger.Info("request received", zap.String("method", r.Method), zap.String("endpoint", r.URL.Path))
 		next.ServeHTTP(w, r)
 	})

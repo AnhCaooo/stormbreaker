@@ -13,11 +13,23 @@ import (
 	"go.uber.org/zap"
 )
 
-// Fetch the market spot price of electric in Finland in any times
+// PostMarketPrice fetches the market spot price of electric in Finland in any times
+//
+//	@Summary		Retrieves the market price
+//	@Description	Fetch the market spot price of electric in Finland in any times
+//	@Tags			market-price
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		models.PriceRequest	true	"Criteria for getting market spot price"
+//	@Success		200	{object}	models.PriceResponse
+//	@Failure		400	{string}	string "Invalid request"
+//	@Failure		401	{string}	string "Unauthenticated/Unauthorized"
+//	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/market-price [post]
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 
@@ -48,13 +60,25 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("get market price of electric successfully")
 }
 
-// Fetch and return the exchange price for today and tomorrow.
+// GetTodayTomorrowPrice returns the exchange price for today and tomorrow.
 // If tomorrow's price is not available yet, return empty struct.
-// Then client needs to show readable information to indicate that data is not available yet.
+// Then client (Web, mobile) needs to show readable information to indicate that data is not available yet.
+//
+//	@Summary		Retrieves the market price for today and tomorrow
+//	@Description	Returns the exchange price for today and tomorrow.
+//	@Description	If tomorrow price is not available yet, return empty struct.
+//	@Description	Then client needs to show readable information to indicate that data is not available yet.
+//	@Tags			market-price
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.TodayTomorrowPrice
+//	@Failure		401	{string}	string "Unauthenticated/Unauthorized"
+//	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
+//	@Router			/v1/market-price/today-tomorrow [get]
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
-		http.Error(w, "User ID not found in context", http.StatusInternalServerError)
+		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
 	cacheKey := fmt.Sprintf("%s-today-tomorrow-exchange-price", userId)
