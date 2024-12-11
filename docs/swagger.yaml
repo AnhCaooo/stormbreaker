@@ -1,18 +1,72 @@
 basePath: /
 definitions:
-  models.PriceRequest:
+  models.DailyPrice:
     properties:
-      compare_to_last_year:
-        description: CompareToLastYear is allowed to equal to "0" and "1"
-        type: integer
-      endtime:
-        description: EndDate has to be in this format "YYYY-MM-DD"
+      available:
+        type: boolean
+      prices:
+        $ref: '#/definitions/models.PriceSeries'
+    type: object
+  models.Data:
+    properties:
+      includeVat:
+        description: IncludeVat is legacy property that return string value and value
+          "0" means no VAT included and string "1" is included
         type: string
+      isToday:
+        type: boolean
+      orig_time:
+        type: string
+      price:
+        type: number
+      time:
+        type: string
+      time_utc:
+        type: string
+      vat_factor:
+        type: number
+    type: object
+  models.PriceData:
+    properties:
       group:
+        description: Group represents 'hour', 'day', 'week', 'month', 'year'
         type: string
-      starttime:
-        description: StartDate has to be in this format "YYYY-MM-DD"
+      series:
+        items:
+          $ref: '#/definitions/models.PriceSeries'
+        type: array
+    type: object
+  models.PriceResponse:
+    properties:
+      data:
+        $ref: '#/definitions/models.PriceData'
+      status:
         type: string
+    type: object
+  models.PriceSeries:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Data'
+        type: array
+      name:
+        type: string
+    type: object
+  models.PriceSettings:
+    properties:
+      margin:
+        type: number
+      user_id:
+        type: string
+      vat_included:
+        type: boolean
+    type: object
+  models.TodayTomorrowPrice:
+    properties:
+      today:
+        $ref: '#/definitions/models.DailyPrice'
+      tomorrow:
+        $ref: '#/definitions/models.DailyPrice'
     type: object
 host: localhost:5001
 info:
@@ -24,7 +78,7 @@ info:
   title: Stormbreaker API (electric service)
   version: 1.0.0
 paths:
-  /market-price:
+  /v1/market-price:
     post:
       consumes:
       - application/json
@@ -35,7 +89,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.PriceRequest'
+            $ref: '#/definitions/models.PriceResponse'
         "400":
           description: Bad Request
           schema:
@@ -51,4 +105,143 @@ paths:
       summary: Retrieves the market price
       tags:
       - market-price
+  /v1/market-price/today-tomorrow:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Returns the exchange price for today and tomorrow.
+        If tomorrow's price is not available yet, return empty struct.
+        Then client needs to show readable information to indicate that data is not available yet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TodayTomorrowPrice'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Retrieves the market price for today and tomorrow
+      tags:
+      - market-price
+  /v1/price-settings:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes the price settings for specific user by identify through
+        'access token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Deletes the price settings for specific user
+      tags:
+      - price-settings
+    get:
+      consumes:
+      - application/json
+      description: retrieves the price settings for specific user by identify through
+        'access token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PriceSettings'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Retrieves the price settings for specific user
+      tags:
+      - price-settings
+    patch:
+      consumes:
+      - application/json
+      description: Updates the price settings for specific user by identify through
+        'access token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Updates the price settings for specific user
+      tags:
+      - price-settings
+    post:
+      consumes:
+      - application/json
+      description: Creates a new price settings for new user by identify through 'access
+        token'.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Creates a new price settings for user
+      tags:
+      - price-settings
 swagger: "2.0"

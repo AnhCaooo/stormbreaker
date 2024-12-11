@@ -13,18 +13,18 @@ import (
 	"go.uber.org/zap"
 )
 
-// PostMarketPrice godoc
+// PostMarketPrice fetches the market spot price of electric in Finland in any times
 //
 //	@Summary		Retrieves the market price
 //	@Description	Fetch the market spot price of electric in Finland in any times
 //	@Tags			market-price
 //	@Accept			json
 //	@Produce		json
-//	@Success		200	{object}	models.PriceRequest
+//	@Success		200	{object}	models.PriceResponse
 //	@Failure		400	{object}	string
 //	@Failure		404	{object}	string
 //	@Failure		500	{object}	string
-//	@Router			/market-price [post]
+//	@Router			/v1/market-price [post]
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -59,6 +59,22 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info("get market price of electric successfully")
 }
 
+// GetTodayTomorrowPrice returns the exchange price for today and tomorrow.
+// If tomorrow's price is not available yet, return empty struct.
+// Then client (Web, mobile) needs to show readable information to indicate that data is not available yet.
+//
+//	@Summary		Retrieves the market price for today and tomorrow
+//	@Description	Returns the exchange price for today and tomorrow.
+//	@Description	If tomorrow's price is not available yet, return empty struct.
+//	@Description	Then client needs to show readable information to indicate that data is not available yet.
+//	@Tags			market-price
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.TodayTomorrowPrice
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/v1/market-price/today-tomorrow [get]
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {

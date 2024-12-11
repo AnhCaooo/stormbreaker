@@ -11,7 +11,18 @@ import (
 )
 
 // todo: cache the price settings to improve performance
-// GetPriceSettings retrieves the price settings for specified user
+// GetPriceSettings retrieves the price settings for specific user
+//
+//	@Summary		Retrieves the price settings for specific user
+//	@Description	retrieves the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.PriceSettings
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/v1/price-settings [get]
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userid, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -37,7 +48,18 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 }
 
-// CreatePriceSettings creates a new price settings for new user
+// CreatePriceSettings creates a new price settings for user
+//
+//	@Summary		Creates a new price settings for user
+//	@Description	Creates a new price settings for new user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/v1/price-settings [post]
 func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -74,6 +96,17 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // PatchPriceSettings updates the price settings for specified user
+//
+//	@Summary		Updates the price settings for specific user
+//	@Description	Updates the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/v1/price-settings [patch]
 func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
@@ -112,6 +145,17 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 // todo: maybe only Admin can perform this action? (to be considered)
 // DeletePriceSettings deletes the price settings when user was deleted or removed
+//
+//	@Summary		Deletes the price settings for specific user
+//	@Description	Deletes the price settings for specific user by identify through 'access token'.
+//	@Tags			price-settings
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	string
+//	@Failure		400	{object}	string
+//	@Failure		404	{object}	string
+//	@Failure		500	{object}	string
+//	@Router			/v1/price-settings [delete]
 func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
