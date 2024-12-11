@@ -28,7 +28,9 @@ import (
 func initializeRouter(handler *handlers.Handler, middleware *middleware.Middleware, endpoints []routes.Endpoint) *mux.Router {
 	r := mux.NewRouter()
 
+	// add swagger endpoint for API documentation
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
 	// Apply middlewares
 	middlewares := []func(http.Handler) http.Handler{
 		middleware.Logger,
@@ -88,8 +90,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.
 
 //	@title			Stormbreaker API (electric service)
 //	@version		1.0.0
-//	@description	Service for retrieving information about market electric price in Finland
-//	@termsOfService	http://swagger.io/terms/
+//	@description	Service for retrieving information about market electric price in Finland.
 
 //	@contact.name	Anh Cao
 //	@contact.email	anhcao4922@gmail.com
