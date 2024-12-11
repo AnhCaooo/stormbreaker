@@ -39,10 +39,6 @@ func (m *Middleware) Logger(next http.Handler) http.Handler {
 // read the token from request and do verify the access token
 func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/swagger/") {
-			next.ServeHTTP(w, r)
-			return
-		}
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
 			w.WriteHeader(http.StatusForbidden)

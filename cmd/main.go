@@ -18,6 +18,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
+	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
@@ -115,17 +116,17 @@ func main() {
 	// Initialize resources: cache, database
 	cache := cache.NewCache(logger)
 	// Initialize database connection
-	// mongo := db.NewMongo(ctx, &configuration.Database, logger)
-	// mongoClient, err := mongo.EstablishConnection()
-	// if err != nil {
-	// 	logger.Fatal(constants.Server, zap.Error(err))
-	// }
-	// defer mongoClient.Disconnect(ctx)
+	mongo := db.NewMongo(ctx, &configuration.Database, logger)
+	mongoClient, err := mongo.EstablishConnection()
+	if err != nil {
+		logger.Fatal(constants.Server, zap.Error(err))
+	}
+	defer mongoClient.Disconnect(ctx)
 
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(logger, configuration)
 	// Initialize Handler
-	handler := handlers.NewHandler(logger, cache, nil)
+	handler := handlers.NewHandler(logger, cache, mongo)
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
 
