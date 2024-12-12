@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
@@ -24,13 +25,28 @@ import (
 //	@Failure		500	{object}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/price-settings [get]
 func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
-	userid, ok := r.Context().Value(constants.UserIdKey).(string)
+	userId, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
+	cacheKey := fmt.Sprintf("%s-price-settings", userId)
 
-	settings, statusCode, err := h.mongo.GetPriceSettings(userid)
+	cacheSettings, isValid := h.cache.Get(cacheKey)
+	if isValid {
+		if err := encode.EncodeResponse(w, http.StatusOK, cacheSettings); err != nil {
+			h.logger.Error(
+				fmt.Sprintf("%s failed to encode cache data", constants.Server),
+				zap.Error(err),
+			)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.logger.Info("[cache] get price settings successfully")
+		return
+	}
+
+	settings, statusCode, err := h.mongo.GetPriceSettings(userId)
 	if err != nil {
 		h.logger.Error(constants.Server, zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
@@ -45,6 +61,9 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// cache price settings and keep for 1 hours
+	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Duration(time.Duration.Hours(1)))
 
 }
 
@@ -128,6 +147,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
+	cacheKey := fmt.Sprintf("%s-price-settings", userId)
 
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
@@ -164,6 +184,8 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	h.cache.Delete(cacheKey)
 }
 
 // todo: maybe only Admin can perform this action? (to be considered)
@@ -186,6 +208,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
+	cacheKey := fmt.Sprintf("%s-price-settings", userId)
 
 	statusCode, err := h.mongo.DeletePriceSettings(userId)
 	if err != nil {
@@ -206,4 +229,6 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	h.cache.Delete(cacheKey)
+
 }
