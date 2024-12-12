@@ -1,6 +1,6 @@
 module github.com/AnhCaooo/stormbreaker
 
-go 1.21.6
+go 1.23.4
 
 require (
 	github.com/AnhCaooo/go-goods v0.0.0-20241206151331-df6dc86b5bb1
