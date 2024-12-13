@@ -66,8 +66,8 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	value, isValid := c.Data[key]
-	if !isValid || time.Now().After(value.Expiration) {
+	value, exists := c.Data[key]
+	if !exists || time.Now().After(value.Expiration) {
 		c.Delete(key)
 		c.logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
 		return nil, false
