@@ -66,9 +66,9 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	value, isValid := c.Data[key]
-	if !isValid || time.Now().After(value.Expiration) {
-		delete(c.Data, key)
+	value, exists := c.Data[key]
+	if !exists || time.Now().After(value.Expiration) {
+		c.Delete(key)
 		c.logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
 		return nil, false
 	}
@@ -77,4 +77,15 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 		zap.Time("current-time-utc", time.Now().UTC()),
 	)
 	return value.Value, true
+}
+
+// Delete cache based on receiving cache key. If key is not valid, then Delete is no-op
+func (c *Cache) Delete(key string) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, exists := c.Data[key]
+	if exists {
+		c.logger.Debug("cache key exists and will be removed")
+		delete(c.Data, key)
+	}
 }
