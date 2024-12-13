@@ -86,7 +86,7 @@ func (db Mongo) GetPriceSettings(userID string) (settings *models.PriceSettings,
 		err = fmt.Errorf("failed to get price settings: %s", err.Error())
 		return
 	}
-	db.logger.Info("get price settings successfully", zap.Any("user_id", userID))
+	db.logger.Info("get price settings successfully")
 	return settings, http.StatusOK, nil
 }
 
@@ -98,7 +98,7 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode i
 		return
 	}
 
-	result, err := db.collection.InsertOne(db.ctx, settings)
+	_, err = db.collection.InsertOne(db.ctx, settings)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			statusCode = http.StatusConflict
@@ -111,7 +111,7 @@ func (db Mongo) InsertPriceSettings(settings models.PriceSettings) (statusCode i
 		}
 	}
 
-	db.logger.Info("update price settings successfully", zap.Any("updated_id", result.InsertedID))
+	db.logger.Info("create new price settings successfully")
 	return http.StatusCreated, err
 }
 
