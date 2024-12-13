@@ -7,12 +7,12 @@ import (
 )
 
 // return current date in Helsinki time with specific hour and minute.
-// Use case examples: set expired time for caching
+// Use case examples: set cache to expired at specific time
 func SetTime(hour int, minute int) (time.Time, error) {
 	// get timezone
-	location, err := time.LoadLocation("Europe/Helsinki")
+	location, err := loadHelsinkiLocation()
 	if err != nil {
-		return time.Now(), fmt.Errorf("failed to get current location: %v", err)
+		return time.Now(), err
 	}
 
 	// Get current time in Finnish time
@@ -21,9 +21,29 @@ func SetTime(hour int, minute int) (time.Time, error) {
 	// Get year, month, and day components
 	year, month, day := now.Date()
 	settingTime := time.Date(year, month, day, hour, minute, 0, 0, location)
+	// return as UTC
+	return settingTime.UTC(), nil
+}
 
-	// Convert to UTC
-	settingTimeInUTC := settingTime.UTC()
+// Get current time in Finnish time then convert to UTC
+func GetCurrentTimeInUTC() (time.Time, error) {
+	location, err := loadHelsinkiLocation()
+	if err != nil {
+		return time.Now(), err
+	}
+	now := time.Now().In(location)
 
-	return settingTimeInUTC, nil
+	// Get year, month, and day components
+	year, month, day := now.Date()
+	currentTime := time.Date(year, month, day, now.Hour(), now.Minute(), 0, 0, location)
+	// return as UTC
+	return currentTime.UTC(), nil
+}
+
+func loadHelsinkiLocation() (*time.Location, error) {
+	location, err := time.LoadLocation("Europe/Helsinki")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current location: %s", err.Error())
+	}
+	return location, nil
 }

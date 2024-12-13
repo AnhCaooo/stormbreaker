@@ -63,7 +63,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// cache price settings and keep for 1 hours
-	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Duration(time.Duration.Hours(1)))
+	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Hour*time.Duration(1))
 
 }
 
