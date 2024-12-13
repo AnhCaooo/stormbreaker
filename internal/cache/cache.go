@@ -81,5 +81,11 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 
 // Delete cache based on receiving cache key. If key is not valid, then Delete is no-op
 func (c *Cache) Delete(key string) {
-	delete(c.Data, key)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, exists := c.Data[key]
+	if exists {
+		c.logger.Debug("cache key exists and will be removed")
+		delete(c.Data, key)
+	}
 }
