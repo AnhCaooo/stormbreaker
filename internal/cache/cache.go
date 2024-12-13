@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +35,15 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	expirationTime := time.Now().Add(duration)
+	now, err := helpers.GetCurrentTimeInUTC()
+	if err != nil {
+		c.logger.Fatal("failed to get current time", zap.Error(err))
+	}
+	expirationTime := now.Add(duration)
+	c.logger.Debug("time information",
+		zap.Time("urrent-time-in-utc-zone", time.Now().UTC()),
+		zap.Time("expired-time-utc", expirationTime),
+	)
 	c.Data[key] = CacheValue{
 		Value:      value,
 		Expiration: expirationTime,
@@ -46,7 +55,10 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
-	c.logger.Debug("[server] set expired time for cache", zap.Time("expired-time-utc", expiredTime))
+	c.logger.Debug("set cache to be expired at",
+		zap.Time("expired-time-utc", expiredTime),
+		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
+	)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -67,25 +79,26 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	defer c.lock.Unlock()
 
 	value, exists := c.Data[key]
-	if !exists || time.Now().After(value.Expiration) {
-		c.Delete(key)
-		c.logger.Debug("[server] cache was expired or not yet cached", zap.String("cache-key", key))
+	if !exists {
+		c.logger.Debug("cache key was not found from cache")
 		return nil, false
 	}
-	c.logger.Debug("[server] cache living time.",
-		zap.Any("expired-time-utc", value.Expiration),
-		zap.Time("current-time-utc", time.Now().UTC()),
+	if time.Now().After(value.Expiration) {
+		c.logger.Debug("cache was expired",
+			zap.Time("expiration-time-in-utc-zone", value.Expiration),
+			zap.Time("current-time-in-utc-zone", time.Now()),
+		)
+		return nil, false
+	}
+	c.logger.Debug("cache living time.",
+		zap.Any("expired-time-in-utc-zone", value.Expiration),
+		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 	)
 	return value.Value, true
 }
 
 // Delete cache based on receiving cache key. If key is not valid, then Delete is no-op
 func (c *Cache) Delete(key string) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	_, exists := c.Data[key]
-	if exists {
-		c.logger.Debug("cache key exists and will be removed")
-		delete(c.Data, key)
-	}
+	delete(c.Data, key)
+
 }
