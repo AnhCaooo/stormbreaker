@@ -33,10 +33,9 @@ func (r *Rabbit) EstablishConnection() (*amqp.Connection, error) {
 
 	r.connection = connection
 	r.logger.Info("Successfully connected to RabbitMQ")
-
 	return connection, nil
 }
 
 func (r *Rabbit) getURI() string {
-	return fmt.Sprintf("amqp://%s:%st@%s:%s/", r.config.Username, r.config.Password, r.config.Host, r.config.Port)
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, r.config.Host, r.config.Port)
 }
