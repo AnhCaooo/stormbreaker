@@ -9,19 +9,29 @@ import (
 
 type Consumer struct {
 	logger  *zap.Logger
-	channel *amqp.Channel
+	Channel *amqp.Channel
 }
 
-func NewConsumer(channel *amqp.Channel, logger *zap.Logger) *Consumer {
-	return &Consumer{
-		channel: channel,
-		logger:  logger,
+// NewConsumer receives connection client, then opens channel and build consumer instance
+func NewConsumer(connection *amqp.Connection, logger *zap.Logger) (*Consumer, error) {
+	// create a new channel
+	ch, err := connection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open a channel: %s", err.Error())
 	}
+
+	return &Consumer{
+		Channel: ch,
+		logger:  logger,
+	}, nil
 }
 
 // DeclareQueue ensures that the queue is declared and exists before consuming messages:
 func (c *Consumer) DeclareQueue(queueName string) error {
-	_, err := c.channel.QueueDeclare(
+	if c.Channel == nil {
+		return fmt.Errorf("consumer channel is nil, ensure connection is established")
+	}
+	_, err := c.Channel.QueueDeclare(
 		queueName, // queue name
 		true,      // durable
 		false,     // auto-delete
@@ -36,12 +46,12 @@ func (c *Consumer) DeclareQueue(queueName string) error {
 }
 
 func (c *Consumer) ConsumeMessage(queueName string) {
-	if c.channel == nil {
+	if c.Channel == nil {
 		c.logger.Fatal("channel is nil, ensure connection is established")
 		return
 	}
 
-	msgs, err := c.channel.Consume(
+	msgs, err := c.Channel.Consume(
 		queueName, // queue
 		"",        // consumer
 		true,      // auto-ack
