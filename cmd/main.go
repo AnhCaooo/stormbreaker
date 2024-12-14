@@ -147,7 +147,7 @@ func main() {
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(logger, configuration)
 	// Initialize Handler
-	handler := handlers.NewHandler(logger, cache, nil, nil, nil)
+	handler := handlers.NewHandler(logger, cache, mongo, messageProducer, messageConsumer)
 
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
