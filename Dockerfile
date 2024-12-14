@@ -1,5 +1,7 @@
 FROM --platform=linux/amd64 golang:alpine
 
+LABEL maintainer="Anh Cao <anhcao4922@gmail.com>"
+
 # Set destination inside the container
 WORKDIR /app
 
