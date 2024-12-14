@@ -18,9 +18,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
-	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
-	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"go.uber.org/zap"
@@ -117,36 +115,37 @@ func main() {
 	// Initialize resources: cache, database
 	cache := cache.NewCache(logger)
 	// Initialize database connection
-	mongo := db.NewMongo(ctx, &configuration.Database, logger)
-	mongoClient, err := mongo.EstablishConnection()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer mongoClient.Disconnect(ctx)
+	// mongo := db.NewMongo(ctx, &configuration.Database, logger)
+	// mongoClient, err := mongo.EstablishConnection()
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
+	// defer mongoClient.Disconnect(ctx)
 
 	// Initialize RabbitMQ connection
-	rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger)
-	rabbitConnection, err := rabbitMQ.EstablishConnection()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer rabbitConnection.Close()
-	// Initialize RabbitMQ producer and consumer
-	messageProducer, err := rabbitmq.NewProducer(rabbitConnection, logger, ctx)
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer messageProducer.Channel.Close()
-	messageConsumer, err := rabbitmq.NewConsumer(rabbitConnection, logger)
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer messageConsumer.Channel.Close()
+	// rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger)
+	// rabbitConnection, err := rabbitMQ.EstablishConnection()
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
+	// defer rabbitConnection.Close()
+	// // Initialize RabbitMQ producer
+	// messageProducer, err := rabbitmq.NewProducer(rabbitConnection, logger, ctx)
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
+	// defer messageProducer.Channel.Close()
+	// // Initialize RabbitMQ consumer
+	// messageConsumer, err := rabbitmq.NewConsumer(rabbitConnection, logger)
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
+	// defer messageConsumer.Channel.Close()
 
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(logger, configuration)
 	// Initialize Handler
-	handler := handlers.NewHandler(logger, cache, mongo, messageProducer, messageConsumer)
+	handler := handlers.NewHandler(logger, cache, nil, nil, nil)
 
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
