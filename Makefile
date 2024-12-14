@@ -7,7 +7,7 @@ DOCKER_CONTAINER = ${DOCKER_IMAGE}:${TAGGED_VERSION}
 .PHONY: build tag push test docker swagger
 
 build: 
-	docker build --tag ${DOCKER_CONTAINER} .
+	docker build -f Dockerfile --tag ${DOCKER_CONTAINER} .
 
 tag: 
 	docker tag ${DOCKER_CONTAINER} ${DOCKER_USERNAME}/${DOCKER_CONTAINER}
