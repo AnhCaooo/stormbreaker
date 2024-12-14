@@ -7,25 +7,36 @@ import (
 
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
+	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
-	logger *zap.Logger
-	cache  *cache.Cache
-	mongo  *db.Mongo
+	logger          *zap.Logger
+	cache           *cache.Cache
+	mongo           *db.Mongo
+	messageProducer *rabbitmq.Producer
+	messageConsumer *rabbitmq.Consumer
 }
 
 // NewHandler returns a new Handler instance
-func NewHandler(logger *zap.Logger, cache *cache.Cache, mongo *db.Mongo) *Handler {
+func NewHandler(
+	logger *zap.Logger,
+	cache *cache.Cache,
+	mongo *db.Mongo,
+	messageProducer *rabbitmq.Producer,
+	messageConsumer *rabbitmq.Consumer,
+) *Handler {
 	if mongo == nil {
 		logger.Warn("MongoDB client is nil, using mock or no-op database")
 	}
 
 	return &Handler{
-		logger: logger,
-		cache:  cache,
-		mongo:  mongo,
+		logger:          logger,
+		cache:           cache,
+		mongo:           mongo,
+		messageProducer: messageProducer,
+		messageConsumer: messageConsumer,
 	}
 }
 
