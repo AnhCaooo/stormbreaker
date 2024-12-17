@@ -25,6 +25,7 @@ func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger) *
 	}
 }
 
+// EstablishConnection tries to establish a connection with RabbitMQ server
 func (r *Rabbit) EstablishConnection() (*amqp.Connection, error) {
 	connection, err := amqp.Dial(r.getURI())
 	if err != nil {
@@ -34,6 +35,35 @@ func (r *Rabbit) EstablishConnection() (*amqp.Connection, error) {
 	r.connection = connection
 	r.logger.Info("Successfully connected to RabbitMQ")
 	return connection, nil
+}
+
+// NewProducer retrieves connection client, then opens channel and build producer instance
+func (r *Rabbit) NewProducer() (*Producer, error) {
+	// create a new channel
+	ch, err := r.connection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open a channel for producer: %s", err.Error())
+	}
+
+	return &Producer{
+		Channel: ch,
+		logger:  r.logger,
+		ctx:     r.ctx,
+	}, nil
+}
+
+// NewConsumer retrieves connection client, then opens channel and build consumer instance
+func (r *Rabbit) NewConsumer() (*Consumer, error) {
+	// create a new channel
+	ch, err := r.connection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to open a channel for consumer: %s", err.Error())
+	}
+
+	return &Consumer{
+		Channel: ch,
+		logger:  r.logger,
+	}, nil
 }
 
 func (r *Rabbit) getURI() string {
