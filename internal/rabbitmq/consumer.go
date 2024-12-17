@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"fmt"
 
+	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 )
@@ -35,11 +36,14 @@ func (c *Consumer) DeclareQueue(queueName string) error {
 	return nil
 }
 
-// ConsumeMessage reads messages from the queue
-func (c *Consumer) ConsumeMessage() {
+// ConsumeMessage will get queue name, declare it and start to read messages from the queue
+func (c *Consumer) Start(queueName string) {
+	if err := c.DeclareQueue(queueName); err != nil {
+		c.logger.Fatal(constants.Server, zap.Error(err))
+	}
+
 	if c.Channel == nil {
 		c.logger.Fatal("channel is nil, ensure connection is established")
-		return
 	}
 
 	consumer, autoAck, exclusive, noLocal, noWait := "", true, false, false, false
@@ -58,7 +62,7 @@ func (c *Consumer) ConsumeMessage() {
 	stopChan := make(chan bool)
 	go func() {
 		for d := range msgs {
-			c.logger.Info("Received a message", zap.Any("message", d.Body))
+			c.logger.Info("Received a message", zap.Any("message", string(d.Body)))
 
 			if err := d.Ack(false); err != nil {
 				c.logger.Error("Error acknowledging message:", zap.Error(err))

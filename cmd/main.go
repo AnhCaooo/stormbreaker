@@ -126,37 +126,28 @@ func main() {
 
 	// Initialize RabbitMQ connection
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger)
-	rabbitClient, err := rabbitMQ.EstablishConnection()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer rabbitClient.Close()
 	// Initialize RabbitMQ producer
-	messageProducer, err := rabbitMQ.NewProducer()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer messageProducer.Channel.Close()
+	// messageProducer, err := rabbitMQ.NewRabbitMQProducer()
+	// if err != nil {
+	// 	logger.Fatal(constants.Server, zap.Error(err))
+	// }
 	// Initialize RabbitMQ consumer
-	messageConsumer, err := rabbitMQ.NewConsumer()
+	messageConsumer, err := rabbitMQ.NewRabbitMQConsumer()
 	if err != nil {
 		logger.Fatal(constants.Server, zap.Error(err))
 	}
 	defer messageConsumer.Channel.Close()
-	if err := messageConsumer.DeclareQueue("price-settings-creation"); err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	messageConsumer.ConsumeMessage()
+	messageConsumer.Start("user_signup_notification")
 
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(logger, configuration)
 	// Initialize Handler
-	handler := handlers.NewHandler(logger, cache, mongo, nil, nil)
+	apiHandler := handlers.NewHandler(logger, cache, mongo)
 	// Initialize Endpoints pool
-	endpoints := routes.InitializeEndpoints(handler)
+	endpoints := routes.InitializeEndpoints(apiHandler)
 
 	// Initial new Mux router
-	r := initializeRouter(handler, middleware, endpoints)
+	r := initializeRouter(apiHandler, middleware, endpoints)
 	// Start server
 	run(ctx, logger, configuration, r)
 }
