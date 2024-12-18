@@ -71,20 +71,17 @@ func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (respon
 // In practice, tomorrow's price would be available around 2pm-4pm everyday
 func (e Electric) FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models.TodayTomorrowPrice, err error) {
 	reqBody := e.buildTodayTomorrowRequestPayload()
-	todayTomorrowPrice, statusCode, err := e.FetchSpotPrice(reqBody)
+	todayTomorrowPrice, _, err := e.FetchSpotPrice(reqBody)
 	if err != nil {
-		http.Error(w, err.Error(), statusCode)
 		return nil, fmt.Errorf("%s failed to fetch data: %s", constants.Server, err.Error())
 	}
 
 	todayTomorrowResponse, err = helpers.MapToTodayTomorrowResponse(todayTomorrowPrice)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, fmt.Errorf("%s failed to map to informative struct data: %s", constants.Server, err.Error())
 	}
 
 	if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowResponse); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil, fmt.Errorf("%s failed to encode response data: %s", constants.Server, err.Error())
 	}
 
