@@ -59,19 +59,8 @@ func main() {
 	defer mongo.Client.Disconnect(ctx)
 
 	// Initialize RabbitMQ connection
-	rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger)
-	// Initialize RabbitMQ producer
-	// messageProducer, err := rabbitMQ.NewRabbitMQProducer()
-	// if err != nil {
-	// 	logger.Fatal(constants.Server, zap.Error(err))
-	// }
-	// Initialize RabbitMQ consumer
-	messageConsumer, err := rabbitMQ.NewRabbitMQConsumer()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer messageConsumer.Channel.Close()
-	messageConsumer.Start("user_signup_notification")
+	rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger, mongo)
+	go rabbitMQ.StartRabbitMQConsumer(rabbitmq.USER_SIGN_UP_NOTIFICATION)
 
 	// Start server
 	run(ctx, logger, configuration, mongo)
