@@ -20,6 +20,7 @@ type CacheValue struct {
 	Expiration time.Time
 }
 
+// NewCache returns a new Cache instance
 func NewCache(logger *zap.Logger) *Cache {
 	return &Cache{
 		Data:   make(map[string]CacheValue),
@@ -41,7 +42,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 	}
 	expirationTime := now.Add(duration)
 	c.logger.Debug("time information",
-		zap.Time("urrent-time-in-utc-zone", time.Now().UTC()),
+		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 		zap.Time("expired-time-utc", expirationTime),
 	)
 	c.Data[key] = CacheValue{

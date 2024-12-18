@@ -26,35 +26,45 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func initializeRouter(handler *handlers.Handler, middleware *middleware.Middleware, endpoints []routes.Endpoint) *mux.Router {
-	r := mux.NewRouter()
+//	@title			Stormbreaker API (electric service)
+//	@version		1.0.0
+//	@description	Service for retrieving information about market electric price in Finland.
 
-	// add swagger endpoint for API documentation
-	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+//	@contact.name	Anh Cao
+//	@contact.email	anhcao4922@gmail.com
 
-	// Apply middlewares
-	middlewares := []func(http.Handler) http.Handler{
-		middleware.Logger,
-		middleware.Authenticate,
+// @host		localhost:5001
+// @BasePath	/
+func main() {
+	ctx := context.Background()
+
+	// todo: implement to accept a dynamic log level
+	// Initialize logger
+	logger := log.InitLogger(zapcore.InfoLevel)
+	defer logger.Sync()
+
+	configuration := &models.Config{}
+	// Load and validate configuration
+	err := config.LoadFile(configuration)
+	if err != nil {
+		logger.Fatal(constants.Server, zap.Error(err))
 	}
-	for _, mw := range middlewares {
-		r.Use(mw)
-	}
 
-	// Apply endpoint handlers
-	for _, endpoint := range endpoints {
-		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
+	// Initialize database connection
+	mongo := db.NewMongo(ctx, &configuration.Database, logger)
+	if err := mongo.EstablishConnection(); err != nil {
+		logger.Fatal(constants.Server, zap.Error(err))
 	}
+	defer mongo.Client.Disconnect(ctx)
 
-	r.MethodNotAllowedHandler = http.HandlerFunc(handler.NotAllowed)
-	r.NotFoundHandler = http.HandlerFunc(handler.NotFound)
-	return r
+	// Start server
+	run(ctx, logger, configuration, mongo)
 }
 
-func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.Router) {
+func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *db.Mongo) {
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", config.Server.Port),
-		Handler: r,
+		Handler: newMuxRouter(logger, config, mongo),
 	}
 
 	// Channel to listen for termination signals
@@ -89,49 +99,37 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, r *mux.
 	logger.Info("Server exited gracefully")
 }
 
-//	@title			Stormbreaker API (electric service)
-//	@version		1.0.0
-//	@description	Service for retrieving information about market electric price in Finland.
-
-//	@contact.name	Anh Cao
-//	@contact.email	anhcao4922@gmail.com
-
-// @host		localhost:5001
-// @BasePath	/
-func main() {
-	ctx := context.Background()
-
-	// todo: implement to accept a dynamic log level
-	// Initialize logger
-	logger := log.InitLogger(zapcore.InfoLevel)
-	defer logger.Sync()
-
-	configuration := &models.Config{}
-	// Load and validate configuration
-	err := config.LoadFile(configuration)
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-
-	// Initialize resources: cache, database
+// todo: Proxy, CORS?
+// newMuxRouter is responsible for all the top-level HTTP stuff that
+// applies to all endpoints, like cache, database, CORS, auth middleware, and logging
+func newMuxRouter(logger *zap.Logger, config *models.Config, mongo *db.Mongo) *mux.Router {
+	// Initialize cache
 	cache := cache.NewCache(logger)
-	// Initialize database connection
-	mongo := db.NewMongo(ctx, &configuration.Database, logger)
-	mongoClient, err := mongo.EstablishConnection()
-	if err != nil {
-		logger.Fatal(constants.Server, zap.Error(err))
-	}
-	defer mongoClient.Disconnect(ctx)
-
 	// Initialize Middleware
-	middleware := middleware.NewMiddleware(logger, configuration)
+	middleware := middleware.NewMiddleware(logger, config)
 	// Initialize Handler
 	handler := handlers.NewHandler(logger, cache, mongo)
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(handler)
 
-	// Initial new Mux router
-	r := initializeRouter(handler, middleware, endpoints)
-	// Start server
-	run(ctx, logger, configuration, r)
+	r := mux.NewRouter()
+	// Apply middlewares
+	middlewares := []func(http.Handler) http.Handler{
+		middleware.Logger,
+		middleware.Authenticate,
+	}
+	for _, mw := range middlewares {
+		r.Use(mw)
+	}
+
+	// swagger endpoint for API documentation
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+	// Apply endpoint handlers
+	for _, endpoint := range endpoints {
+		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
+	}
+
+	r.MethodNotAllowedHandler = http.HandlerFunc(handler.NotAllowed)
+	r.NotFoundHandler = http.HandlerFunc(handler.NotFound)
+	return r
 }
