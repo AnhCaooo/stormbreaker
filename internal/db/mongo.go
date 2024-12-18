@@ -17,6 +17,7 @@ type Mongo struct {
 	config     *models.Database
 	logger     *zap.Logger
 	ctx        context.Context
+	Client     *mongo.Client
 	collection *mongo.Collection
 }
 
@@ -28,28 +29,28 @@ func NewMongo(ctx context.Context, config *models.Database, logger *zap.Logger) 
 	}
 }
 
-// Init to connect to mongo database instance and create collection if it does not exist
-func (db *Mongo) EstablishConnection() (*mongo.Client, error) {
+// EstablishConnection tries to connect to mongo server and create collection if it does not exist
+func (db *Mongo) EstablishConnection() (err error) {
 	clientOptions := options.Client().ApplyURI(db.getURI())
-	client, err := mongo.Connect(db.ctx, clientOptions)
+	db.Client, err = mongo.Connect(db.ctx, clientOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %s", err.Error())
+		return fmt.Errorf("failed to connect to database: %s", err.Error())
 	}
 
-	err = client.Ping(db.ctx, nil)
+	err = db.Client.Ping(db.ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
+		return fmt.Errorf("failed to ping database: %s", err.Error())
 	}
 
-	if err = db.initializeCollection(client); err != nil {
-		return nil, err
+	if err = db.initializeCollection(); err != nil {
+		return err
 	}
 	db.logger.Info("Successfully connected to database")
-	return client, nil
+	return nil
 }
 
-func (db *Mongo) initializeCollection(client *mongo.Client) error {
-	db.collection = client.Database(db.config.Name).Collection(db.config.Collection)
+func (db *Mongo) initializeCollection() error {
+	db.collection = db.Client.Database(db.config.Name).Collection(db.config.Collection)
 
 	// Ensure unique index (only needs to be done once)
 	indexModel := mongo.IndexModel{
