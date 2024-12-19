@@ -28,14 +28,14 @@ func (c *Consumer) declareQueue(queueName string) error {
 	queue, err := c.Channel.QueueDeclare(
 		queueName,  // queue name
 		durable,    // durable
-		autoDelete, // auto-delete
+		autoDelete, // auto-delete when unused
 		exclusive,  // exclusive
 		noWait,     // no-wait
 		nil,        // args
 	)
 	c.queue = &queue
 	if err != nil {
-		return fmt.Errorf("failed to declare queue: %s", err.Error())
+		return fmt.Errorf("failed to declare a queue: %s", err.Error())
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func (c *Consumer) Listen(queueName string) {
 		c.logger.Fatal("channel is nil, ensure connection is established")
 	}
 
-	consumer, autoAck, exclusive, noLocal, noWait := "", true, false, false, false
+	consumer, autoAck, exclusive, noLocal, noWait := "", false, false, false, false
 	msgs, err := c.Channel.Consume(
 		c.queue.Name, // queue
 		consumer,     // consumer
@@ -63,19 +63,22 @@ func (c *Consumer) Listen(queueName string) {
 	if err != nil {
 		c.logger.Fatal("failed to register a consumer:", zap.Error(err))
 	}
-	stopChan := make(chan bool)
+
+	c.logger.Info(fmt.Sprintf("[*] Waiting for messages from %s...", queueName))
+
+	// Make a channel to receive messages into infinite loop.
+	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			c.logger.Info("Received a message", zap.Any("message", string(d.Body)))
+			c.logger.Info("[*] Received a message", zap.Any("message", string(d.Body)))
 
 			if err := d.Ack(false); err != nil {
-				c.logger.Error("Error acknowledging message:", zap.Error(err))
+				c.logger.Error("[*] Error acknowledging message:", zap.Error(err))
 			} else {
-				c.logger.Info("Acknowledged message")
+				c.logger.Info("[*] Acknowledged message")
 			}
 		}
 	}()
-	c.logger.Info(fmt.Sprintf("[*] Waiting for messages from %s...", queueName))
 	// Stop for program termination
-	<-stopChan
+	<-forever
 }

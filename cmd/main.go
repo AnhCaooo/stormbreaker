@@ -58,10 +58,6 @@ func main() {
 	}
 	defer mongo.Client.Disconnect(ctx)
 
-	// Initialize RabbitMQ connection
-	rabbitMQ := rabbitmq.NewRabbit(ctx, &configuration.MessageBroker, logger, mongo)
-	go rabbitMQ.StartRabbitMQConsumer(rabbitmq.USER_SIGN_UP_NOTIFICATION)
-
 	// Start server
 	run(ctx, logger, configuration, mongo)
 }
@@ -84,6 +80,12 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 		}
 	}()
 
+	// Initialize RabbitMQ connection in a separate goroutine
+	go func() {
+		rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
+		rabbitMQ.StartConsumer(rabbitmq.USER_SIGN_UP_NOTIFICATION)
+	}()
+
 	// Wait for termination signal
 	select {
 	case <-ctx.Done(): // Context cancellation
@@ -101,7 +103,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 
-	logger.Info("Server exited gracefully")
+	logger.Info("Server and RabbitMQ exited gracefully")
 }
 
 // todo: Proxy, CORS?

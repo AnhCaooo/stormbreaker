@@ -105,12 +105,12 @@ func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
 */
 
 // NewConsumer retrieves connection client, then opens channel and build consumer instance
-func (r *RabbitMQ) newRabbitMQConsumer() (*Consumer, error) {
+func (r *RabbitMQ) newConsumer() (*Consumer, error) {
 	conn, err := r.establishConnection()
 	if err != nil {
 		return nil, err
 	}
-	go r.monitorConnection(conn)
+	// go r.monitorConnection(conn)
 	// create a new channel
 	ch, err := conn.Channel()
 	if err != nil {
@@ -124,9 +124,9 @@ func (r *RabbitMQ) newRabbitMQConsumer() (*Consumer, error) {
 	}, nil
 }
 
-// StartRabbitMQConsumer starts the RabbitMQ consumer based on given queue name
-func (r *RabbitMQ) StartRabbitMQConsumer(queueName string) {
-	messageConsumer, err := r.newRabbitMQConsumer()
+// StartConsumer starts the RabbitMQ consumer based on given queue name
+func (r *RabbitMQ) StartConsumer(queueName string) {
+	messageConsumer, err := r.newConsumer()
 	if err != nil {
 		r.logger.Fatal(constants.Server, zap.Error(err))
 	}
