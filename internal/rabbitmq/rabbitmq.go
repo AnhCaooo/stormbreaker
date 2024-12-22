@@ -104,8 +104,29 @@ func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
 -------------------------------- CONSUMER METHODS --------------------------------
 */
 
-// NewConsumer retrieves connection client, then opens channel and build consumer instance
-func (r *RabbitMQ) newConsumer() (*Consumer, error) {
+// StartConsumer create new RabbitMQ consumer based on given queue name.
+// Then listen to incoming messages from the queue
+func (r *RabbitMQ) StartConsumer(exchange, routingKey, queueName string) {
+	messageConsumer, err := r.newConsumer(exchange)
+	if err != nil {
+		r.logger.Fatal(constants.Server, zap.Error(err))
+	}
+	defer messageConsumer.Channel.Close()
+
+	if err := messageConsumer.declareQueue(queueName); err != nil {
+		r.logger.Fatal(constants.Server, zap.Error(err))
+	}
+	if err := messageConsumer.bindQueue(routingKey); err != nil {
+		r.logger.Fatal(constants.Server, zap.Error(err))
+	}
+	messageConsumer.Listen()
+}
+
+// NewConsumer retrieves connection client, then opens new channel,
+// and declare exchange.
+// Finally build and return consumer instance
+func (r *RabbitMQ) newConsumer(exchange string) (*Consumer, error) {
+	exchange_type := "topic"
 	conn, err := r.establishConnection()
 	if err != nil {
 		return nil, err
@@ -117,19 +138,23 @@ func (r *RabbitMQ) newConsumer() (*Consumer, error) {
 		return nil, fmt.Errorf("failed to open a channel for consumer: %s", err.Error())
 	}
 
-	return &Consumer{
-		Channel: ch,
-		logger:  r.logger,
-		mongo:   r.mongo,
-	}, nil
-}
-
-// StartConsumer starts the RabbitMQ consumer based on given queue name
-func (r *RabbitMQ) StartConsumer(queueName string) {
-	messageConsumer, err := r.newConsumer()
-	if err != nil {
-		r.logger.Fatal(constants.Server, zap.Error(err))
+	durable, autoDelete, internal, noWait := true, false, false, false
+	if err = ch.ExchangeDeclare(
+		exchange,      // name
+		exchange_type, // type
+		durable,       // durable
+		autoDelete,    // auto-deleted
+		internal,      // internal
+		noWait,        // no-wait
+		nil,           // arguments
+	); err != nil {
+		return nil, fmt.Errorf("failed to declare an exchange: %s", err.Error())
 	}
-	defer messageConsumer.Channel.Close()
-	messageConsumer.Listen(queueName)
+
+	return &Consumer{
+		Channel:  ch,
+		exchange: exchange,
+		logger:   r.logger,
+		mongo:    r.mongo,
+	}, nil
 }

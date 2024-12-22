@@ -80,10 +80,19 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 		}
 	}()
 
-	// Initialize RabbitMQ connection in a separate goroutine
+	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
+	// Initialize RabbitMQ connections in a separate goroutine
 	go func() {
-		rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
-		rabbitMQ.StartConsumer(rabbitmq.USER_SIGN_UP_NOTIFICATION)
+		rabbitMQ.StartConsumer(
+			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
+			rabbitmq.USER_CREATED_KEY,
+			rabbitmq.USER_CREATED_QUEUE)
+	}()
+	go func() {
+		rabbitMQ.StartConsumer(
+			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
+			rabbitmq.USER_DELETED_KEY,
+			rabbitmq.USER_DELETED_QUEUE)
 	}()
 
 	// Wait for termination signal
