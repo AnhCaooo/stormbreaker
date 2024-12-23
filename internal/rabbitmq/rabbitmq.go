@@ -3,11 +3,11 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 
-	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -19,10 +19,11 @@ const (
 )
 
 type RabbitMQ struct {
-	config *models.Broker
-	ctx    context.Context
-	logger *zap.Logger
-	mongo  *db.Mongo
+	config     *models.Broker
+	connection *amqp.Connection
+	ctx        context.Context
+	logger     *zap.Logger
+	mongo      *db.Mongo
 }
 
 func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, mongo *db.Mongo) *RabbitMQ {
@@ -35,13 +36,12 @@ func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, m
 }
 
 // EstablishConnection tries to establish a connection with RabbitMQ server
-func (r *RabbitMQ) establishConnection() (*amqp.Connection, error) {
-	connection, err := amqp.Dial(r.getURI())
+func (r *RabbitMQ) establishConnection() (err error) {
+	r.connection, err = amqp.Dial(r.getURI())
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
+		return fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
 	}
-	r.logger.Info("Successfully connected to RabbitMQ")
-	return connection, nil
+	return nil
 }
 
 func (r *RabbitMQ) getURI() string {
@@ -50,9 +50,9 @@ func (r *RabbitMQ) getURI() string {
 
 // monitorConnection creates a go channel and a goroutine to monitor the connection.
 // if connection is lost, then reconnect
-func (r RabbitMQ) monitorConnection(conn *amqp.Connection) {
+func (r *RabbitMQ) monitorConnection() {
 	notifyClose := make(chan *amqp.Error)
-	conn.NotifyClose(notifyClose)
+	r.connection.NotifyClose(notifyClose)
 
 	for {
 		err := <-notifyClose
@@ -61,12 +61,11 @@ func (r RabbitMQ) monitorConnection(conn *amqp.Connection) {
 			var newConn *amqp.Connection
 			var reconnectErr error
 			for {
-				newConn, reconnectErr = r.establishConnection()
-				if reconnectErr == nil {
+				if reconnectErr = r.establishConnection(); reconnectErr == nil {
 					r.logger.Info("Reconnected to RabbitMQ in goroutine")
-					conn = newConn
+					r.connection = newConn
 					notifyClose = make(chan *amqp.Error)
-					conn.NotifyClose(notifyClose)
+					r.connection.NotifyClose(notifyClose)
 					break
 				}
 				r.logger.Error(fmt.Sprintf("Reconnection failed. Retrying in %d...", reconnectDelay), zap.Error(reconnectErr))
@@ -82,14 +81,13 @@ func (r RabbitMQ) monitorConnection(conn *amqp.Connection) {
 
 // NewProducer retrieves connection client, then opens channel and build producer instance
 func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
-	conn, err := r.establishConnection()
-	if err != nil {
+	if err := r.establishConnection(); err != nil {
 		return nil, err
 	}
 
-	go r.monitorConnection(conn)
+	go r.monitorConnection()
 	// create a new channel
-	ch, err := conn.Channel()
+	ch, err := r.connection.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open a channel for producer: %s", err.Error())
 	}
@@ -106,34 +104,54 @@ func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
 
 // StartConsumer create new RabbitMQ consumer based on given queue name.
 // Then listen to incoming messages from the queue
-func (r *RabbitMQ) StartConsumer(exchange, routingKey, queueName string) {
-	messageConsumer, err := r.newConsumer(exchange)
+func (r *RabbitMQ) StartConsumer(
+	workerID int, wg *sync.WaitGroup, errChan chan<- error,
+	exchange, routingKey, queueName string,
+) {
+	// defer wg.Done() // Mark this goroutine as done when exiting.
+	messageConsumer, err := r.newConsumer(workerID, exchange)
 	if err != nil {
-		r.logger.Fatal(constants.Server, zap.Error(err))
+		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errChan <- errMsg
+		return
 	}
-	defer messageConsumer.Channel.Close()
 
+	r.logger.Info(fmt.Sprintf("[* worker %d] Successfully connected to RabbitMQ and declare consumer", workerID))
+	defer func() {
+		r.logger.Info(fmt.Sprintf("[* worker %d] Closing channel", workerID))
+		if err := messageConsumer.Channel.Close(); err != nil {
+			r.logger.Warn(fmt.Sprintf("[* worker %d] Error closing channel", workerID), zap.Error(err))
+		}
+	}()
+
+	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
-		r.logger.Fatal(constants.Server, zap.Error(err))
+		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errChan <- errMsg
+		return
 	}
+	// Bind queue
 	if err := messageConsumer.bindQueue(routingKey); err != nil {
-		r.logger.Fatal(constants.Server, zap.Error(err))
+		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errChan <- errMsg
+		return
 	}
+
 	messageConsumer.Listen()
+
 }
 
 // NewConsumer retrieves connection client, then opens new channel,
 // and declare exchange.
 // Finally build and return consumer instance
-func (r *RabbitMQ) newConsumer(exchange string) (*Consumer, error) {
+func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error) {
 	exchange_type := "topic"
-	conn, err := r.establishConnection()
-	if err != nil {
+	if err := r.establishConnection(); err != nil {
 		return nil, err
 	}
-	// go r.monitorConnection(conn)
+	// go r.monitorConnection()
 	// create a new channel
-	ch, err := conn.Channel()
+	ch, err := r.connection.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open a channel for consumer: %s", err.Error())
 	}
@@ -156,5 +174,6 @@ func (r *RabbitMQ) newConsumer(exchange string) (*Consumer, error) {
 		exchange: exchange,
 		logger:   r.logger,
 		mongo:    r.mongo,
+		workerID: workerID,
 	}, nil
 }

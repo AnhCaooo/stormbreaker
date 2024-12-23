@@ -10,8 +10,12 @@ import (
 
 const (
 	USER_NOTIFICATIONS_EXCHANGE string = "user_notifications_exchange"
+	USER_TEST_KEY1              string = "user.test1" // todo: to be removed
+	USER_TEST_KEY2              string = "user.test2" // todo: to be removed
 	USER_CREATED_KEY            string = "user.created"
 	USER_DELETED_KEY            string = "user.deleted"
+	USER_TEST_QUEUE1            string = "user_test_queue1" // todo: to be removed
+	USER_TEST_QUEUE2            string = "user_test_queue2" // todo: to be removed
 	USER_CREATED_QUEUE          string = "user_created_queue"
 	USER_DELETED_QUEUE          string = "user_deleted_queue"
 )
@@ -22,6 +26,7 @@ type Consumer struct {
 	logger   *zap.Logger
 	mongo    *db.Mongo
 	queue    *amqp.Queue
+	workerID int
 }
 
 // DeclareQueue ensures that the queue is declared and exists before consuming messages:
@@ -74,28 +79,29 @@ func (c *Consumer) Listen() {
 		nil,          // args
 	)
 	if err != nil {
-		c.logger.Fatal("failed to register a consumer:", zap.Error(err))
+		errMessage := fmt.Sprintf("[* worker %d] Failed to register a consumer: %s", c.workerID, err.Error())
+		c.logger.Fatal(errMessage)
 	}
 
-	c.logger.Info(fmt.Sprintf("[*] Waiting for messages from %s...", c.queue.Name))
+	c.logger.Info(fmt.Sprintf("[* worker %d] Waiting for messages from %s...", c.workerID, c.queue.Name))
 
 	// Make a channel to receive messages into infinite loop.
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
 			c.logger.Info(
-				fmt.Sprintf("[*] Received a message from %s", c.queue.Name),
+				fmt.Sprintf("[* worker %d] Received a message from %s", c.workerID, c.queue.Name),
 				zap.Any("message", string(d.Body)),
 			)
 
 			if err := d.Ack(false); err != nil {
 				c.logger.Error(
-					fmt.Sprintf("[*] Error acknowledging message from %s:", c.queue.Name),
+					fmt.Sprintf("[* worker %d] Error acknowledging message from %s:", c.workerID, c.queue.Name),
 					zap.Error(err),
 				)
 			} else {
 				c.logger.Info(
-					fmt.Sprintf("[*] Acknowledged message from %s", c.queue.Name),
+					fmt.Sprintf("[* worker %d] Acknowledged message from %s", c.workerID, c.queue.Name),
 				)
 			}
 		}

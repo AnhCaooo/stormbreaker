@@ -71,28 +71,48 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	// Channel to listen for termination signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	// Error channel to listen for errors from goroutines
+	// var wg sync.WaitGroup
+	errChan := make(chan error, 3)
 
 	// Run the server in a separate goroutine
+	// wg.Add(1)
 	go func() {
+		// defer wg.Done()
 		logger.Info("Server starting", zap.String("port", config.Server.Port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server error", zap.Error(err))
+			errChan <- fmt.Errorf("error in worker %d: %s", 1, err.Error())
 		}
 	}()
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	// Initialize RabbitMQ connections in a separate goroutine
+	// wg.Add(1)
 	go func() {
 		rabbitMQ.StartConsumer(
+			2,
+			nil,
+			errChan,
 			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
 			rabbitmq.USER_CREATED_KEY,
 			rabbitmq.USER_CREATED_QUEUE)
 	}()
+	// wg.Add(1)
 	go func() {
 		rabbitMQ.StartConsumer(
+			3,
+			nil,
+			errChan,
 			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
 			rabbitmq.USER_DELETED_KEY,
 			rabbitmq.USER_DELETED_QUEUE)
+	}()
+
+	// Monitor all errors from errChan and log them
+	go func() {
+		for err := range errChan {
+			logger.Error("Error occurred", zap.Error(err))
+		}
 	}()
 
 	// Wait for termination signal
@@ -111,8 +131,9 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
-
-	logger.Info("Server and RabbitMQ exited gracefully")
+	// wg.Wait()
+	close(errChan)
+	logger.Info("Server and RabbitMQ workers exited gracefully")
 }
 
 // todo: Proxy, CORS?
