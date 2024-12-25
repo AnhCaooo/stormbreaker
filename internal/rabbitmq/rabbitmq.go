@@ -45,7 +45,7 @@ func (r *RabbitMQ) establishConnection() (err error) {
 }
 
 func (r *RabbitMQ) getURI() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, r.config.Host, r.config.Port)
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, "localhost", r.config.Port)
 }
 
 // monitorConnection creates a go channel and a goroutine to monitor the connection.
@@ -105,24 +105,20 @@ func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
 // StartConsumer create new RabbitMQ consumer based on given queue name.
 // Then listen to incoming messages from the queue
 func (r *RabbitMQ) StartConsumer(
-	workerID int, wg *sync.WaitGroup, errChan chan<- error,
+	workerID int,
+	wg *sync.WaitGroup,
+	errChan chan<- error,
+	stopChan <-chan struct{},
 	exchange, routingKey, queueName string,
 ) {
-	// defer wg.Done() // Mark this goroutine as done when exiting.
+	defer wg.Done()
 	messageConsumer, err := r.newConsumer(workerID, exchange)
 	if err != nil {
 		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
 		errChan <- errMsg
 		return
 	}
-
-	r.logger.Info(fmt.Sprintf("[* worker %d] Successfully connected to RabbitMQ and declare consumer", workerID))
-	defer func() {
-		r.logger.Info(fmt.Sprintf("[* worker %d] Closing channel", workerID))
-		if err := messageConsumer.Channel.Close(); err != nil {
-			r.logger.Warn(fmt.Sprintf("[* worker %d] Error closing channel", workerID), zap.Error(err))
-		}
-	}()
+	r.logger.Info(fmt.Sprintf("[* worker %d] Successfully connected to RabbitMQ and declared consumer", workerID))
 
 	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
@@ -137,7 +133,8 @@ func (r *RabbitMQ) StartConsumer(
 		return
 	}
 
-	messageConsumer.Listen()
+	r.logger.Info(fmt.Sprintf("[* worker %d] start to listen...", workerID))
+	messageConsumer.Listen(stopChan, errChan)
 
 }
 
@@ -170,10 +167,12 @@ func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error)
 	}
 
 	return &Consumer{
-		Channel:  ch,
-		exchange: exchange,
-		logger:   r.logger,
-		mongo:    r.mongo,
-		workerID: workerID,
+		channel:    ch,
+		ctx:        r.ctx,
+		exchange:   exchange,
+		logger:     r.logger,
+		mongo:      r.mongo,
+		workerID:   workerID,
+		connection: r.connection,
 	}, nil
 }

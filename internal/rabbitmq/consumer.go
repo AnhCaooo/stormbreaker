@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/AnhCaooo/stormbreaker/internal/db"
@@ -21,22 +22,24 @@ const (
 )
 
 type Consumer struct {
-	Channel  *amqp.Channel
-	exchange string
-	logger   *zap.Logger
-	mongo    *db.Mongo
-	queue    *amqp.Queue
-	workerID int
+	channel    *amqp.Channel
+	connection *amqp.Connection
+	ctx        context.Context
+	exchange   string
+	logger     *zap.Logger
+	mongo      *db.Mongo
+	queue      *amqp.Queue
+	workerID   int
 }
 
 // DeclareQueue ensures that the queue is declared and exists before consuming messages:
 func (c *Consumer) declareQueue(queueName string) error {
-	if c.Channel == nil {
+	if c.channel == nil {
 		return fmt.Errorf("consumer channel is nil, ensure connection is established")
 	}
 
 	durable, autoDelete, exclusive, noWait := false, false, false, false
-	queue, err := c.Channel.QueueDeclare(
+	queue, err := c.channel.QueueDeclare(
 		queueName,  // queue name
 		durable,    // durable
 		autoDelete, // auto-delete when unused
@@ -54,7 +57,7 @@ func (c *Consumer) declareQueue(queueName string) error {
 func (c *Consumer) bindQueue(routingKey string) error {
 	c.logger.Info(fmt.Sprintf("Binding '%s' to '%s' with routing key '%s'",
 		c.queue.Name, c.exchange, routingKey))
-	if err := c.Channel.QueueBind(
+	if err := c.channel.QueueBind(
 		c.queue.Name,
 		routingKey,
 		c.exchange,
@@ -67,9 +70,9 @@ func (c *Consumer) bindQueue(routingKey string) error {
 }
 
 // Listen will start to read messages from the queue
-func (c *Consumer) Listen() {
+func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 	consumer, autoAck, exclusive, noLocal, noWait := "", false, false, false, false
-	msgs, err := c.Channel.Consume(
+	msgs, err := c.channel.Consume(
 		c.queue.Name, // queue
 		consumer,     // consumer
 		autoAck,      // auto-ack
@@ -79,33 +82,58 @@ func (c *Consumer) Listen() {
 		nil,          // args
 	)
 	if err != nil {
-		errMessage := fmt.Sprintf("[* worker %d] Failed to register a consumer: %s", c.workerID, err.Error())
-		c.logger.Fatal(errMessage)
+		errMessage := fmt.Errorf("[* worker %d] Failed to register a consumer: %s", c.workerID, err.Error())
+		errChan <- errMessage
+		return
 	}
 
 	c.logger.Info(fmt.Sprintf("[* worker %d] Waiting for messages from %s...", c.workerID, c.queue.Name))
 
 	// Make a channel to receive messages into infinite loop.
-	forever := make(chan bool)
-	go func() {
-		for d := range msgs {
+	for {
+		select {
+		case <-stopChan: // Respond to shutdown signal
+			c.closeConnection(errChan)
+			return
+		case msg, ok := <-msgs:
+			if !ok {
+				c.logger.Info(fmt.Sprintf("[* worker %d] Message channel closed", c.workerID))
+				return
+			}
 			c.logger.Info(
 				fmt.Sprintf("[* worker %d] Received a message from %s", c.workerID, c.queue.Name),
-				zap.Any("message", string(d.Body)),
+				zap.Any("message", string(msg.Body)),
 			)
-
-			if err := d.Ack(false); err != nil {
-				c.logger.Error(
-					fmt.Sprintf("[* worker %d] Error acknowledging message from %s:", c.workerID, c.queue.Name),
-					zap.Error(err),
-				)
+			// Process message
+			if err := msg.Ack(false); err != nil {
+				errMsg := fmt.Errorf("[* worker %d] Error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
+				errChan <- errMsg
+				return
 			} else {
 				c.logger.Info(
 					fmt.Sprintf("[* worker %d] Acknowledged message from %s", c.workerID, c.queue.Name),
 				)
 			}
 		}
-	}()
-	// Stop for program termination
-	<-forever
+	}
+}
+
+// Close will close the channel and connection of the consumer
+func (c *Consumer) closeConnection(errChan chan<- error) {
+	c.logger.Info("close rabbitmq connection", zap.String("queue name", c.queue.Name))
+	if c.channel != nil {
+		if err := c.channel.Close(); err != nil {
+			errMsg := fmt.Errorf("[* worker %d] Error closing channel: %s", c.workerID, err.Error())
+			errChan <- errMsg
+			return
+		}
+	}
+	if c.connection != nil {
+		if err := c.connection.Close(); err != nil {
+			errMsg := fmt.Errorf("[* worker %d] Error closing connection: %s", c.workerID, err.Error())
+			errChan <- errMsg
+			return
+		}
+	}
+
 }

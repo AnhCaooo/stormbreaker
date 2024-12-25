@@ -3,26 +3,19 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-	"time"
 
 	"github.com/AnhCaooo/go-goods/log"
 	_ "github.com/AnhCaooo/stormbreaker/docs"
-	"github.com/AnhCaooo/stormbreaker/internal/api/handlers"
-	"github.com/AnhCaooo/stormbreaker/internal/api/middleware"
-	"github.com/AnhCaooo/stormbreaker/internal/api/routes"
-	"github.com/AnhCaooo/stormbreaker/internal/cache"
+	"github.com/AnhCaooo/stormbreaker/internal/api"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
-	"github.com/gorilla/mux"
-	httpSwagger "github.com/swaggo/http-swagger" // http-swagger middleware
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -63,49 +56,45 @@ func main() {
 }
 
 func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *db.Mongo) {
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%s", config.Server.Port),
-		Handler: newMuxRouter(logger, config, mongo),
-	}
-
-	// Channel to listen for termination signals
+	// Create a signal channel to listen for OS signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
 	// Error channel to listen for errors from goroutines
-	// var wg sync.WaitGroup
+	var wg sync.WaitGroup
 	errChan := make(chan error, 3)
+	stopChan := make(chan struct{})
 
 	// Run the server in a separate goroutine
-	// wg.Add(1)
-	go func() {
-		// defer wg.Done()
-		logger.Info("Server starting", zap.String("port", config.Server.Port))
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errChan <- fmt.Errorf("error in worker %d: %s", 1, err.Error())
-		}
-	}()
+	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
+	wg.Add(1)
+	go httpServer.Start(1, errChan, &wg)
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	// Initialize RabbitMQ connections in a separate goroutine
-	// wg.Add(1)
+	wg.Add(1)
 	go func() {
 		rabbitMQ.StartConsumer(
 			2,
-			nil,
+			&wg,
 			errChan,
+			stopChan,
 			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
-			rabbitmq.USER_CREATED_KEY,
-			rabbitmq.USER_CREATED_QUEUE)
+			rabbitmq.USER_TEST_KEY1,
+			rabbitmq.USER_TEST_QUEUE1,
+		)
 	}()
-	// wg.Add(1)
+	wg.Add(1)
 	go func() {
 		rabbitMQ.StartConsumer(
 			3,
-			nil,
+			&wg,
 			errChan,
+			stopChan,
 			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
-			rabbitmq.USER_DELETED_KEY,
-			rabbitmq.USER_DELETED_QUEUE)
+			rabbitmq.USER_TEST_KEY2,
+			rabbitmq.USER_TEST_QUEUE2,
+		)
 	}()
 
 	// Monitor all errors from errChan and log them
@@ -116,57 +105,14 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	}()
 
 	// Wait for termination signal
-	select {
-	case <-ctx.Done(): // Context cancellation
-		logger.Warn("Context canceled")
-	case <-stop: // OS signal received
-		logger.Info("Termination signal received")
-	}
-
-	// Create a new context with timeout for graceful shutdown
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	logger.Info("Shutting down server...")
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Fatal("Server forced to shutdown", zap.Error(err))
-	}
-	// wg.Wait()
+	<-stop
+	logger.Info("Termination signal received")
+	// Signal all consumers to stop
+	close(stopChan)
+	httpServer.Stop()
+	// Wait for all goroutines to finish
+	wg.Wait()
+	// Signal all errors to stop
 	close(errChan)
 	logger.Info("Server and RabbitMQ workers exited gracefully")
-}
-
-// todo: Proxy, CORS?
-// newMuxRouter is responsible for all the top-level HTTP stuff that
-// applies to all endpoints, like cache, database, CORS, auth middleware, and logging
-func newMuxRouter(logger *zap.Logger, config *models.Config, mongo *db.Mongo) *mux.Router {
-	// Initialize cache
-	cache := cache.NewCache(logger)
-	// Initialize Middleware
-	middleware := middleware.NewMiddleware(logger, config)
-	// Initialize Handler
-	apiHandler := handlers.NewHandler(logger, cache, mongo)
-	// Initialize Endpoints pool
-	endpoints := routes.InitializeEndpoints(apiHandler)
-
-	r := mux.NewRouter()
-	// Apply middlewares
-	middlewares := []func(http.Handler) http.Handler{
-		middleware.Logger,
-		middleware.Authenticate,
-	}
-	for _, mw := range middlewares {
-		r.Use(mw)
-	}
-
-	// swagger endpoint for API documentation
-	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
-	// Apply endpoint handlers
-	for _, endpoint := range endpoints {
-		r.HandleFunc(endpoint.Path, endpoint.Handler).Methods(endpoint.Method)
-	}
-
-	r.MethodNotAllowedHandler = http.HandlerFunc(apiHandler.NotAllowed)
-	r.NotFoundHandler = http.HandlerFunc(apiHandler.NotFound)
-	return r
 }
