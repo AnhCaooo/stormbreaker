@@ -82,58 +82,38 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 		nil,          // args
 	)
 	if err != nil {
-		errMessage := fmt.Errorf("[* worker %d] Failed to register a consumer: %s", c.workerID, err.Error())
+		errMessage := fmt.Errorf("[worker_%d] Failed to register a consumer: %s", c.workerID, err.Error())
 		errChan <- errMessage
 		return
 	}
 
-	c.logger.Info(fmt.Sprintf("[* worker %d] Waiting for messages from %s...", c.workerID, c.queue.Name))
+	c.logger.Info(fmt.Sprintf("[worker_%d] Waiting for messages from %s...", c.workerID, c.queue.Name))
 
 	// Make a channel to receive messages into infinite loop.
 	for {
 		select {
 		case <-stopChan: // Respond to shutdown signal
-			c.closeConnection(errChan)
+			c.logger.Info(fmt.Sprintf("[worker_%d] Stop listening for messages from %s...", c.workerID, c.queue.Name))
 			return
 		case msg, ok := <-msgs:
 			if !ok {
-				c.logger.Info(fmt.Sprintf("[* worker %d] Message channel closed", c.workerID))
+				c.logger.Info(fmt.Sprintf("[worker_%d] Message channel closed", c.workerID))
 				return
 			}
 			c.logger.Info(
-				fmt.Sprintf("[* worker %d] Received a message from %s", c.workerID, c.queue.Name),
+				fmt.Sprintf("[worker_%d] Received a message from %s", c.workerID, c.queue.Name),
 				zap.Any("message", string(msg.Body)),
 			)
 			// Process message
 			if err := msg.Ack(false); err != nil {
-				errMsg := fmt.Errorf("[* worker %d] Error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
+				errMsg := fmt.Errorf("[worker_%d] Error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
 				errChan <- errMsg
 				return
 			} else {
 				c.logger.Info(
-					fmt.Sprintf("[* worker %d] Acknowledged message from %s", c.workerID, c.queue.Name),
+					fmt.Sprintf("[worker_%d] Acknowledged message from %s", c.workerID, c.queue.Name),
 				)
 			}
 		}
 	}
-}
-
-// Close will close the channel and connection of the consumer
-func (c *Consumer) closeConnection(errChan chan<- error) {
-	c.logger.Info("close rabbitmq connection", zap.String("queue name", c.queue.Name))
-	if c.channel != nil {
-		if err := c.channel.Close(); err != nil {
-			errMsg := fmt.Errorf("[* worker %d] Error closing channel: %s", c.workerID, err.Error())
-			errChan <- errMsg
-			return
-		}
-	}
-	if c.connection != nil {
-		if err := c.connection.Close(); err != nil {
-			errMsg := fmt.Errorf("[* worker %d] Error closing connection: %s", c.workerID, err.Error())
-			errChan <- errMsg
-			return
-		}
-	}
-
 }

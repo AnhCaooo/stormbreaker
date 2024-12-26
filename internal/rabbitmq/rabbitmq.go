@@ -21,6 +21,7 @@ const (
 type RabbitMQ struct {
 	config     *models.Broker
 	connection *amqp.Connection
+	channels   []*amqp.Channel
 	ctx        context.Context
 	logger     *zap.Logger
 	mongo      *db.Mongo
@@ -36,16 +37,37 @@ func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, m
 }
 
 // EstablishConnection tries to establish a connection with RabbitMQ server
-func (r *RabbitMQ) establishConnection() (err error) {
+func (r *RabbitMQ) EstablishConnection() (err error) {
 	r.connection, err = amqp.Dial(r.getURI())
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
 	}
+	r.logger.Info("Successfully connected to RabbitMQ")
 	return nil
 }
 
 func (r *RabbitMQ) getURI() string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, "localhost", r.config.Port)
+}
+
+// CloseConnection closes the connection and all channels
+func (r *RabbitMQ) CloseConnection() {
+	// Close all channels
+	for _, channel := range r.channels {
+		if err := channel.Close(); err != nil {
+			errMsg := fmt.Errorf("failed to close channel: %s", err.Error())
+			r.logger.Fatal(errMsg.Error())
+		}
+	}
+	r.logger.Info("Closed RabbitMQ channels")
+	// Close the connection
+	if r.connection != nil {
+		if err := r.connection.Close(); err != nil {
+			errMsg := fmt.Errorf("failed to close RabbitMQ connection: %s", err.Error())
+			r.logger.Fatal(errMsg.Error())
+		}
+	}
+	r.logger.Info("Closed RabbitMQ connection")
 }
 
 // monitorConnection creates a go channel and a goroutine to monitor the connection.
@@ -61,7 +83,7 @@ func (r *RabbitMQ) monitorConnection() {
 			var newConn *amqp.Connection
 			var reconnectErr error
 			for {
-				if reconnectErr = r.establishConnection(); reconnectErr == nil {
+				if reconnectErr = r.EstablishConnection(); reconnectErr == nil {
 					r.logger.Info("Reconnected to RabbitMQ in goroutine")
 					r.connection = newConn
 					notifyClose = make(chan *amqp.Error)
@@ -81,7 +103,7 @@ func (r *RabbitMQ) monitorConnection() {
 
 // NewProducer retrieves connection client, then opens channel and build producer instance
 func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
-	if err := r.establishConnection(); err != nil {
+	if err := r.EstablishConnection(); err != nil {
 		return nil, err
 	}
 
@@ -114,26 +136,26 @@ func (r *RabbitMQ) StartConsumer(
 	defer wg.Done()
 	messageConsumer, err := r.newConsumer(workerID, exchange)
 	if err != nil {
-		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
 		errChan <- errMsg
 		return
 	}
-	r.logger.Info(fmt.Sprintf("[* worker %d] Successfully connected to RabbitMQ and declared consumer", workerID))
+	r.logger.Info(fmt.Sprintf("[worker_%d] Successfully declared consumer", workerID))
 
 	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
-		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
 		errChan <- errMsg
 		return
 	}
 	// Bind queue
 	if err := messageConsumer.bindQueue(routingKey); err != nil {
-		errMsg := fmt.Errorf("[* worker %d] %s", workerID, err.Error())
+		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
 		errChan <- errMsg
 		return
 	}
 
-	r.logger.Info(fmt.Sprintf("[* worker %d] start to listen...", workerID))
+	r.logger.Info(fmt.Sprintf("[worker_%d] start to listen...", workerID))
 	messageConsumer.Listen(stopChan, errChan)
 
 }
@@ -143,9 +165,6 @@ func (r *RabbitMQ) StartConsumer(
 // Finally build and return consumer instance
 func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error) {
 	exchange_type := "topic"
-	if err := r.establishConnection(); err != nil {
-		return nil, err
-	}
 	// go r.monitorConnection()
 	// create a new channel
 	ch, err := r.connection.Channel()
@@ -166,6 +185,7 @@ func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error)
 		return nil, fmt.Errorf("failed to declare an exchange: %s", err.Error())
 	}
 
+	r.channels = append(r.channels, ch)
 	return &Consumer{
 		channel:    ch,
 		ctx:        r.ctx,

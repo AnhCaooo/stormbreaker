@@ -71,6 +71,9 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	go httpServer.Start(1, errChan, &wg)
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
+	if err := rabbitMQ.EstablishConnection(); err != nil {
+		logger.Fatal("Failed to establish connection with RabbitMQ", zap.Error(err))
+	}
 	// Initialize RabbitMQ connections in a separate goroutine
 	wg.Add(1)
 	go func() {
@@ -110,6 +113,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	// Signal all consumers to stop
 	close(stopChan)
 	httpServer.Stop()
+	rabbitMQ.CloseConnection()
 	// Wait for all goroutines to finish
 	wg.Wait()
 	// Signal all errors to stop
