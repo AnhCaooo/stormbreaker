@@ -69,8 +69,13 @@ func (c *Consumer) declareQueue(queueName string) error {
 // bindQueue binds the consumer's queue to the specified routing key on the exchange.
 // It logs the binding action and returns an error if the binding fails.
 func (c *Consumer) bindQueue(routingKey string) error {
-	c.logger.Info(fmt.Sprintf("[worker_%d] Binding '%s' to '%s' with routing key '%s'",
-		c.workerID, c.queue.Name, c.exchange, routingKey))
+	c.logger.Info(
+		fmt.Sprintf("[worker_%d] binding queue to exchange with routing key", c.workerID),
+		zap.String("queue_name", c.queue.Name),
+		zap.String("exchange", c.exchange),
+		zap.String("routing_key", routingKey),
+	)
+
 	if err := c.channel.QueueBind(
 		c.queue.Name,
 		routingKey,
@@ -96,36 +101,36 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 		nil,          // args
 	)
 	if err != nil {
-		errMessage := fmt.Errorf("[worker_%d] Failed to register a consumer: %s", c.workerID, err.Error())
+		errMessage := fmt.Errorf("[worker_%d] failed to register a consumer: %s", c.workerID, err.Error())
 		errChan <- errMessage
 		return
 	}
 
-	c.logger.Info(fmt.Sprintf("[worker_%d] Waiting for messages from %s...", c.workerID, c.queue.Name))
+	c.logger.Info(fmt.Sprintf("[worker_%d] waiting for messages from %s...", c.workerID, c.queue.Name))
 
 	// Make a channel to receive messages into infinite loop.
 	for {
 		select {
 		case <-stopChan: // Respond to shutdown signal
-			c.logger.Info(fmt.Sprintf("[worker_%d] Stop listening for messages from %s...", c.workerID, c.queue.Name))
+			c.logger.Info(fmt.Sprintf("[worker_%d] stop listening for messages from %s...", c.workerID, c.queue.Name))
 			return
 		case msg, ok := <-msgs:
 			if !ok {
-				c.logger.Info(fmt.Sprintf("[worker_%d] Message channel closed", c.workerID))
+				c.logger.Info(fmt.Sprintf("[worker_%d] message channel closed", c.workerID))
 				return
 			}
 			c.logger.Info(
-				fmt.Sprintf("[worker_%d] Received a message from %s", c.workerID, c.queue.Name),
+				fmt.Sprintf("[worker_%d] received a message from %s", c.workerID, c.queue.Name),
 				zap.Any("message", string(msg.Body)),
 			)
 			// Process message
 			if err := msg.Ack(false); err != nil {
-				errMsg := fmt.Errorf("[worker_%d] Error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
+				errMsg := fmt.Errorf("[worker_%d] error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
 				errChan <- errMsg
 				return
 			} else {
 				c.logger.Info(
-					fmt.Sprintf("[worker_%d] Acknowledged message from %s", c.workerID, c.queue.Name),
+					fmt.Sprintf("[worker_%d] acknowledged message from %s", c.workerID, c.queue.Name),
 				)
 			}
 		}

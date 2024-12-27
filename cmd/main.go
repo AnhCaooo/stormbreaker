@@ -70,20 +70,20 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
-		logger.Fatal("Failed to establish connection with RabbitMQ", zap.Error(err))
+		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
 	}
 	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
 
 	// Monitor all errors from errChan and log them
 	go func() {
 		for err := range errChan {
-			logger.Error("Error occurred", zap.Error(err))
+			logger.Error("error occurred", zap.Error(err))
 		}
 	}()
 
 	// Wait for termination signal
 	<-stop
-	logger.Info("Termination signal received")
+	logger.Info("termination signal received")
 	// Signal all consumers to stop
 	close(stopChan)
 	httpServer.Stop()
@@ -92,5 +92,5 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	wg.Wait()
 	// Signal all errors to stop
 	close(errChan)
-	logger.Info("Server and RabbitMQ workers exited gracefully")
+	logger.Info("HTTP server and RabbitMQ workers exited gracefully")
 }

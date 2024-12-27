@@ -25,7 +25,7 @@ func NewHandler(
 	workerID int,
 ) *Handler {
 	if mongo == nil {
-		logger.Warn("MongoDB client is nil, using mock or no-op database")
+		logger.Warn(fmt.Sprintf("[worker_%d] mongoDB client is nil, using mock or no-op database", workerID))
 	}
 
 	return &Handler{

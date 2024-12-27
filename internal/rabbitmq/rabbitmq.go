@@ -65,7 +65,7 @@ func (r *RabbitMQ) EstablishConnection() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
 	}
-	r.logger.Info("Successfully connected to RabbitMQ")
+	r.logger.Info("successfully connected to RabbitMQ")
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (r *RabbitMQ) CloseConnection() {
 			r.logger.Fatal(errMsg.Error())
 		}
 	}
-	r.logger.Info("Closed RabbitMQ channels")
+	r.logger.Info("closed RabbitMQ channels")
 	// Close the connection
 	if r.connection != nil {
 		if err := r.connection.Close(); err != nil {
@@ -90,7 +90,7 @@ func (r *RabbitMQ) CloseConnection() {
 			r.logger.Fatal(errMsg.Error())
 		}
 	}
-	r.logger.Info("Closed RabbitMQ connection")
+	r.logger.Info("closed RabbitMQ connection")
 }
 
 /*
@@ -172,7 +172,7 @@ func (r *RabbitMQ) startConsumer(
 		errChan <- errMsg
 		return
 	}
-	r.logger.Info(fmt.Sprintf("[worker_%d] Successfully declared consumer", workerID))
+	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared consumer", workerID))
 
 	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
