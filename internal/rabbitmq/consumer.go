@@ -69,8 +69,8 @@ func (c *Consumer) declareQueue(queueName string) error {
 // bindQueue binds the consumer's queue to the specified routing key on the exchange.
 // It logs the binding action and returns an error if the binding fails.
 func (c *Consumer) bindQueue(routingKey string) error {
-	c.logger.Info(fmt.Sprintf("Binding '%s' to '%s' with routing key '%s'",
-		c.queue.Name, c.exchange, routingKey))
+	c.logger.Info(fmt.Sprintf("[worker_%d] Binding '%s' to '%s' with routing key '%s'",
+		c.workerID, c.queue.Name, c.exchange, routingKey))
 	if err := c.channel.QueueBind(
 		c.queue.Name,
 		routingKey,
