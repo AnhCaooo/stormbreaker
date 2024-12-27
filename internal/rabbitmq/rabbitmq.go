@@ -1,10 +1,23 @@
+// AnhCao 2024
+//
+// Package rabbitmq provides a RabbitMQ client implementation for establishing connections,
+// creating producers and consumers, and managing message queues. It includes functionality
+// for monitoring and reconnecting to RabbitMQ servers, as well as handling message
+// production and consumption with multiple workers.
+//
+// Types:
+//
+// - RabbitMQ: Main struct for managing RabbitMQ connections and channels
+//
+// - Producer: Struct for managing message production
+//
+// - Consumer: Struct for managing message consumption
 package rabbitmq
 
 import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -14,19 +27,28 @@ import (
 )
 
 const (
-	reconnectDelay    = 5 * time.Second
-	reconnectAttempts = 5
+	exchange_type = "topic" // exchange type for RabbitMQ
 )
 
+// RabbitMQ represents a RabbitMQ broker instance with its configuration,
+// connection, channels, context, logger, and MongoDB instance.
 type RabbitMQ struct {
-	config     *models.Broker
+	// Configuration settings for the RabbitMQ broker.
+	config *models.Broker
+	// The AMQP connection to the RabbitMQ server.
 	connection *amqp.Connection
-	channels   []*amqp.Channel
-	ctx        context.Context
-	logger     *zap.Logger
-	mongo      *db.Mongo
+	// A slice of AMQP channels for communication with RabbitMQ.
+	channels []*amqp.Channel
+	// The context for managing the lifecycle of the RabbitMQ instance.
+	ctx context.Context
+	// The logger for logging RabbitMQ-related activities
+	logger *zap.Logger
+	// The MongoDB instance for database operations.
+	mongo *db.Mongo
 }
 
+// NewRabbit creates a new instance of RabbitMQ with the provided context, configuration, logger, and MongoDB client.
+// It initializes the RabbitMQ struct with the given parameters.
 func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, mongo *db.Mongo) *RabbitMQ {
 	return &RabbitMQ{
 		ctx:    ctx,
@@ -36,7 +58,8 @@ func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, m
 	}
 }
 
-// EstablishConnection tries to establish a connection with RabbitMQ server
+// EstablishConnection establishes a connection with RabbitMQ server.
+// Returns an error if the connection fails.
 func (r *RabbitMQ) EstablishConnection() (err error) {
 	r.connection, err = amqp.Dial(r.getURI())
 	if err != nil {
@@ -50,7 +73,7 @@ func (r *RabbitMQ) getURI() string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, "localhost", r.config.Port)
 }
 
-// CloseConnection closes the connection and all channels
+// CloseConnection closes first all channels then the connection with RabbitMQ server.
 func (r *RabbitMQ) CloseConnection() {
 	// Close all channels
 	for _, channel := range r.channels {
@@ -70,61 +93,38 @@ func (r *RabbitMQ) CloseConnection() {
 	r.logger.Info("Closed RabbitMQ connection")
 }
 
-// monitorConnection creates a go channel and a goroutine to monitor the connection.
-// if connection is lost, then reconnect
-func (r *RabbitMQ) monitorConnection() {
-	notifyClose := make(chan *amqp.Error)
-	r.connection.NotifyClose(notifyClose)
-
-	for {
-		err := <-notifyClose
-		if err != nil {
-			r.logger.Warn("Connection closed. Reconnecting...", zap.Error(err))
-			var newConn *amqp.Connection
-			var reconnectErr error
-			for {
-				if reconnectErr = r.EstablishConnection(); reconnectErr == nil {
-					r.logger.Info("Reconnected to RabbitMQ in goroutine")
-					r.connection = newConn
-					notifyClose = make(chan *amqp.Error)
-					r.connection.NotifyClose(notifyClose)
-					break
-				}
-				r.logger.Error(fmt.Sprintf("Reconnection failed. Retrying in %d...", reconnectDelay), zap.Error(reconnectErr))
-				time.Sleep(reconnectDelay)
-			}
-		}
-	}
-}
-
 /*
 -------------------------------- PRODUCER METHODS --------------------------------
 */
 
 // NewProducer retrieves connection client, then opens channel and build producer instance
-func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
-	if err := r.EstablishConnection(); err != nil {
-		return nil, err
-	}
-
-	go r.monitorConnection()
-	// create a new channel
-	ch, err := r.connection.Channel()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open a channel for producer: %s", err.Error())
-	}
-	return &Producer{
-		Channel: ch,
-		logger:  r.logger,
-		ctx:     r.ctx,
-	}, nil
-}
+// func (r *RabbitMQ) newProducer() (*Producer, error) {
+// 	// create a new channel
+// 	ch, err := r.connection.Channel()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to open a channel for producer: %s", err.Error())
+// 	}
+// 	return &Producer{
+// 		Channel: ch,
+// 		logger:  r.logger,
+// 		ctx:     r.ctx,
+// 	}, nil
+// }
 
 /*
 -------------------------------- CONSUMER METHODS --------------------------------
 */
 
-// StartConsumers creates multiple consumers based on given exchange, routing key, and queue name
+// StartConsumers initializes and starts multiple consumers in goroutines to process messages from RabbitMQ queues.
+// It adds the required number of wait groups, starts the consumers, and listens for incoming messages.
+//
+// Parameters:
+//
+// - wg: A wait group to synchronize the completion of the consumer goroutines.
+//
+// - errChan: A channel to send errors encountered by the consumers.
+//
+// - stopChan: A channel to signal the consumers to stop processing messages.
 func (r *RabbitMQ) StartConsumers(
 	wg *sync.WaitGroup,
 	errChan chan<- error,
@@ -137,8 +137,27 @@ func (r *RabbitMQ) StartConsumers(
 
 }
 
-// StartConsumer create new RabbitMQ consumer based on given queue name.
-// Then listen to incoming messages from the queue
+// startConsumer starts a RabbitMQ consumer with specific worker.
+// It sets up the consumer, declares and binds the queue, and starts listening for messages.
+//
+// Parameters:
+//
+//   - workerID: An integer representing the ID of the worker.
+//
+//   - wg: A pointer to a sync.WaitGroup to signal when the consumer has finished.
+//
+//   - errChan: A channel to send errors encountered during the consumer setup and operation.
+//
+//   - stopChan: A channel to signal the consumer to stop listening for messages.
+//
+//   - exchange: The name of the RabbitMQ exchange to bind the queue to.
+//
+//   - routingKey: The routing key to bind the queue to the exchange.
+//
+//   - queueName: The name of the RabbitMQ queue to declare and bind.
+//
+// The function logs the progress of the consumer setup and listens for messages until
+// a stop signal is received on the stopChan or an error occurs.
 func (r *RabbitMQ) startConsumer(
 	workerID int,
 	wg *sync.WaitGroup,
@@ -173,12 +192,20 @@ func (r *RabbitMQ) startConsumer(
 
 }
 
-// NewConsumer retrieves connection client, then opens new channel,
-// and declare exchange.
 // Finally build and return consumer instance
+// newConsumer creates a new RabbitMQ consumer with the specified worker ID and exchange name.
+// It opens a new channel, declares the exchange, and returns a Consumer instance.
+//
+// Parameters:
+//
+//   - workerID: An integer representing the ID of the worker.
+//
+//   - exchange: A string representing the name of the exchange.
+//
+// Returns:
+//   - *Consumer: A pointer to the newly created Consumer instance.
+//   - error: An error if the channel could not be opened or the exchange could not be declared.
 func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error) {
-	exchange_type := "topic"
-	// go r.monitorConnection()
 	// create a new channel
 	ch, err := r.connection.Channel()
 	if err != nil {

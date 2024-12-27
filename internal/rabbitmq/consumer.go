@@ -21,18 +21,30 @@ const (
 	USER_DELETED_QUEUE          string = "user_deleted_queue"
 )
 
+// Consumer represents a RabbitMQ consumer with necessary dependencies and configurations.
 type Consumer struct {
-	channel    *amqp.Channel
+	// The AMQP channel used for communication with RabbitMQ.
+	channel *amqp.Channel
+	// The AMQP connection to the RabbitMQ server.
 	connection *amqp.Connection
-	ctx        context.Context
-	exchange   string
-	logger     *zap.Logger
-	mongo      *db.Mongo
-	queue      *amqp.Queue
-	workerID   int
+	// The context for managing the consumer's lifecycle and cancellation.
+	ctx context.Context
+	// The name of the RabbitMQ exchange to bind the consumer to.
+	exchange string
+	//  The logger instance for logging consumer activities.
+	logger *zap.Logger
+	// The MongoDB instance for database operations.
+	mongo *db.Mongo
+	// The RabbitMQ queue to consume messages from.
+	queue *amqp.Queue
+	// The identifier for the worker handling the consumer.
+	workerID int
 }
 
-// DeclareQueue ensures that the queue is declared and exists before consuming messages:
+// declareQueue declares a queue with the given name on the consumer's channel.
+// It ensures the channel is not nil before attempting to declare the queue.
+// If the queue declaration is successful, it assigns the declared queue to the consumer's queue field.
+// Returns an error if the channel is nil or if the queue declaration fails.
 func (c *Consumer) declareQueue(queueName string) error {
 	if c.channel == nil {
 		return fmt.Errorf("consumer channel is nil, ensure connection is established")
@@ -54,6 +66,8 @@ func (c *Consumer) declareQueue(queueName string) error {
 	return nil
 }
 
+// bindQueue binds the consumer's queue to the specified routing key on the exchange.
+// It logs the binding action and returns an error if the binding fails.
 func (c *Consumer) bindQueue(routingKey string) error {
 	c.logger.Info(fmt.Sprintf("Binding '%s' to '%s' with routing key '%s'",
 		c.queue.Name, c.exchange, routingKey))
