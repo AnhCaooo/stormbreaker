@@ -19,6 +19,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// API represents the main structure for the API server.
+// It holds the configuration, context, logger, MongoDB connection,
+// worker ID, HTTP server, and a wait group for managing goroutines.
 type API struct {
 	config   *models.Config
 	ctx      context.Context
@@ -39,6 +42,9 @@ func NewHTTPServer(ctx context.Context, logger *zap.Logger, config *models.Confi
 	}
 }
 
+// Start initializes and starts the API server in a separate goroutine for a given worker.
+// It sets up the server configuration, assigns the worker ID, and starts the server in a new goroutine.
+// If the server encounters an error, it sends the error to the provided error channel.
 func (a *API) Start(workerID int, errChan chan<- error, wg *sync.WaitGroup) {
 	a.workerID = workerID
 	a.wg = wg
@@ -47,10 +53,11 @@ func (a *API) Start(workerID int, errChan chan<- error, wg *sync.WaitGroup) {
 		Handler: a.newMuxRouter(),
 	}
 
+	a.wg.Add(1)
 	go func() {
-		a.logger.Info("Server starting", zap.String("port", a.config.Server.Port))
+		a.logger.Info(fmt.Sprintf("[worker_%d] Server starting...", a.workerID), zap.String("port", a.config.Server.Port))
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errChan <- fmt.Errorf("error in worker %d: %s", 1, err.Error())
+			errChan <- fmt.Errorf("[worker_%d] error in worker: %s", a.workerID, err.Error())
 		}
 	}()
 
@@ -59,17 +66,16 @@ func (a *API) Start(workerID int, errChan chan<- error, wg *sync.WaitGroup) {
 // Shutdown the server gracefully
 func (a *API) Stop() {
 	defer a.wg.Done()
-	a.logger.Info("Stopping down HTTP server in worker", zap.Int("worker_id", a.workerID))
+	a.logger.Info(fmt.Sprintf("[worker_%d] Stopping down HTTP server...", a.workerID), zap.String("port", a.config.Server.Port))
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := a.server.Shutdown(shutdownCtx); err != nil {
-		a.logger.Fatal("Server forced to shutdown", zap.Error(err))
+		a.logger.Fatal(fmt.Sprintf("[worker_%d] Server forced to shutdown", a.workerID), zap.Error(err))
 	}
 
-	a.logger.Info("HTTP server stopped", zap.Int("worker_id", a.workerID))
-
+	a.logger.Info(fmt.Sprintf("[worker_%d] HTTP server stopped", a.workerID))
 }
 
 // todo: Proxy, CORS?

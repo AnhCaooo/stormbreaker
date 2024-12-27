@@ -66,9 +66,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	stopChan := make(chan struct{})
 
 	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
-	wg.Add(1)
-	// Run the server in a separate goroutine
-	go httpServer.Start(1, errChan, &wg)
+	httpServer.Start(1, errChan, &wg)
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
