@@ -36,26 +36,26 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 	if isValid {
 		if err := encode.EncodeResponse(w, http.StatusOK, cacheSettings); err != nil {
 			h.logger.Error(
-				fmt.Sprintf("%s failed to encode cache data", constants.Server),
+				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
 				zap.Error(err),
 			)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.logger.Info("[cache] get price settings successfully")
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get price settings successfully", h.workerID))
 		return
 	}
 
 	settings, statusCode, err := h.mongo.GetPriceSettings(userId)
 	if err != nil {
-		h.logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
 	if err := encode.EncodeResponse(w, statusCode, settings); err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to encode response body:", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to encode response body", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -92,14 +92,14 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
-		h.logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Client), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if reqBody.UserID != "" && reqBody.UserID != userId {
 		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
-		h.logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Client), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
@@ -108,7 +108,7 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.InsertPriceSettings(reqBody)
 	if err != nil {
-		h.logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
@@ -118,7 +118,7 @@ func (h Handler) CreatePriceSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to encode response body:", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to encode response body", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -151,14 +151,14 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
-		h.logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Client), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if reqBody.UserID != "" && reqBody.UserID != userId {
 		err = fmt.Errorf("given `user_id` %s is different from `user_id` in `access_token`", reqBody.UserID)
-		h.logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Client), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusForbidden)
 		return
 	}
@@ -167,7 +167,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 	reqBody.UserID = userId
 	statusCode, err := h.mongo.PatchPriceSettings(reqBody)
 	if err != nil {
-		h.logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
@@ -178,7 +178,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to encode response body:", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to encode response body:", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -212,7 +212,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	statusCode, err := h.mongo.DeletePriceSettings(userId)
 	if err != nil {
-		h.logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
@@ -223,7 +223,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 
 	if err := encode.EncodeResponse(w, statusCode, response); err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to encode response body:", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to encode response body:", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -2,6 +2,7 @@
 package cache
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -10,9 +11,10 @@ import (
 )
 
 type Cache struct {
-	Data   map[string]CacheValue
-	logger *zap.Logger
-	lock   sync.Mutex
+	Data     map[string]CacheValue
+	logger   *zap.Logger
+	lock     sync.Mutex
+	workerID int
 }
 
 type CacheValue struct {
@@ -21,10 +23,11 @@ type CacheValue struct {
 }
 
 // NewCache returns a new Cache instance
-func NewCache(logger *zap.Logger) *Cache {
+func NewCache(logger *zap.Logger, workerID int) *Cache {
 	return &Cache{
-		Data:   make(map[string]CacheValue),
-		logger: logger,
+		Data:     make(map[string]CacheValue),
+		logger:   logger,
+		workerID: workerID,
 	}
 }
 
@@ -38,10 +41,10 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 
 	now, err := helpers.GetCurrentTimeInUTC()
 	if err != nil {
-		c.logger.Fatal("failed to get current time", zap.Error(err))
+		c.logger.Error(fmt.Sprintf("[worker_%d] failed to get current time", c.workerID), zap.Error(err))
 	}
 	expirationTime := now.Add(duration)
-	c.logger.Debug("time information",
+	c.logger.Debug(fmt.Sprintf("[worker_%d] time information", c.workerID),
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 		zap.Time("expired-time-utc", expirationTime),
 	)
@@ -56,7 +59,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
-	c.logger.Debug("set cache to be expired at",
+	c.logger.Debug(fmt.Sprintf("[worker_%d] set cache to be expired at", c.workerID),
 		zap.Time("expired-time-utc", expiredTime),
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 	)
@@ -75,23 +78,22 @@ func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time
 // If the value is still valid, it returns the value and a boolean value of `true` to indicate that a valid value was found.
 // If the value is not valid (means not yet cached), it returns `nil` and a boolean value of `false`.
 func (c *Cache) Get(key string) (interface{}, bool) {
-	c.logger.Debug("get cache key: ", zap.String("key", key))
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	value, exists := c.Data[key]
 	if !exists {
-		c.logger.Debug("cache key was not found from cache")
+		c.logger.Debug(fmt.Sprintf("[worker_%d] cache key was not found from cache", c.workerID))
 		return nil, false
 	}
 	if time.Now().After(value.Expiration) {
-		c.logger.Debug("cache was expired",
+		c.logger.Debug(fmt.Sprintf("[worker_%d] cache was expired", c.workerID),
 			zap.Time("expiration-time-in-utc-zone", value.Expiration),
 			zap.Time("current-time-in-utc-zone", time.Now()),
 		)
 		return nil, false
 	}
-	c.logger.Debug("cache living time.",
+	c.logger.Debug(fmt.Sprintf("[worker_%d] cache living time", c.workerID),
 		zap.Any("expired-time-in-utc-zone", value.Expiration),
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 	)

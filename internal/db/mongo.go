@@ -154,6 +154,7 @@ func (db Mongo) DeletePriceSettings(userID string) (statusCode int, err error) {
 		return
 	}
 	filter := bson.M{"user_id": userID}
+	db.logger.Info("deleting price settings", zap.String("user_id", userID))
 
 	result, err := db.collection.DeleteOne(db.ctx, filter)
 	if err != nil {
@@ -168,4 +169,22 @@ func (db Mongo) DeletePriceSettings(userID string) (statusCode int, err error) {
 	}
 	db.logger.Info("delete user price settings successfully", zap.Int64("deleted_amount", result.DeletedCount))
 	return http.StatusOK, nil
+}
+
+// GetAllPriceSettings retrieves all documents in the PriceSettings collection.
+// Use case: Admin wants to see all price settings.
+func (db Mongo) GetAllPriceSettings() error {
+	// Retrieves documents that match the filter and prints them as structs
+	cursor, err := db.collection.Find(context.TODO(), bson.D{})
+	if err != nil {
+		return fmt.Errorf("failed: %s", err.Error())
+	}
+
+	var results []models.PriceSettings
+	if err = cursor.All(db.ctx, &results); err != nil {
+		return fmt.Errorf("failed to cursor all price settings: %s", err.Error())
+	}
+	db.logger.Info("get all price settings successfully", zap.Any("results", results))
+
+	return nil
 }

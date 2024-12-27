@@ -35,7 +35,7 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 
 	reqBody, err := encode.DecodeRequest[models.PriceRequest](r)
 	if err != nil {
-		h.logger.Error(constants.Client, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Client), zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -43,21 +43,21 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 	electric := electric.NewElectric(h.logger, h.mongo, userId)
 	externalData, statusCode, err := electric.FetchSpotPrice(&reqBody)
 	if err != nil {
-		h.logger.Error(constants.Server, zap.Error(err))
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
 		return
 	}
 
 	if err := encode.EncodeResponse(w, statusCode, externalData); err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to encode data from external source", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to encode data from external source", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	h.logger.Info("get market price of electric successfully")
+	h.logger.Info(fmt.Sprintf("[worker_%d] got market price of electric successfully", h.workerID))
 }
 
 // GetTodayTomorrowPrice returns the exchange price for today and tomorrow.
@@ -87,13 +87,13 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	if isValid {
 		if err := encode.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
 			h.logger.Error(
-				fmt.Sprintf("%s failed to encode cache data", constants.Server),
+				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
 				zap.Error(err),
 			)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.logger.Info("[cache] get today and tomorrow's exchange price successfully")
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully", h.workerID))
 		return
 	}
 
@@ -101,7 +101,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to fetch today and/or tomorrow spot price from external source", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to fetch today and/or tomorrow spot price from external source", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -114,7 +114,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		expiredTime, err := helpers.SetTime(23, 59)
 		if err != nil {
 			h.logger.Error(
-				fmt.Sprintf("%s failed to set expired time for caching", constants.Server),
+				fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
 				zap.Error(err),
 			)
 			return
@@ -126,7 +126,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 	expiredTime, err := helpers.SetTime(14, 00)
 	if err != nil {
 		h.logger.Error(
-			fmt.Sprintf("%s failed to set expired time for caching", constants.Server),
+			fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
 			zap.Error(err),
 		)
 		return
