@@ -45,6 +45,12 @@ type RabbitMQ struct {
 	logger *zap.Logger
 	// The MongoDB instance for database operations.
 	mongo *db.Mongo
+	//  A channel to send errors encountered during the consumer setup and operation.
+	errChan chan<- error
+	// A channel to signal the consumer to stop listening for messages.
+	stopChan <-chan struct{}
+	// A pointer to a sync.WaitGroup to signal when the consumer has finished.
+	wg *sync.WaitGroup
 }
 
 // NewRabbit creates a new instance of RabbitMQ with the provided context, configuration, logger, and MongoDB client.
@@ -117,23 +123,19 @@ func (r *RabbitMQ) CloseConnection() {
 
 // StartConsumers initializes and starts multiple consumers in goroutines to process messages from RabbitMQ queues.
 // It adds the required number of wait groups, starts the consumers, and listens for incoming messages.
-//
-// Parameters:
-//
-// - wg: A wait group to synchronize the completion of the consumer goroutines.
-//
-// - errChan: A channel to send errors encountered by the consumers.
-//
-// - stopChan: A channel to signal the consumers to stop processing messages.
 func (r *RabbitMQ) StartConsumers(
 	wg *sync.WaitGroup,
 	errChan chan<- error,
 	stopChan <-chan struct{},
 ) {
-	wg.Add(1)
-	go r.startConsumer(2, wg, errChan, stopChan, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY1, USER_TEST_QUEUE1)
-	wg.Add(1)
-	go r.startConsumer(3, wg, errChan, stopChan, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY2, USER_TEST_QUEUE2)
+	r.wg = wg
+	r.errChan = errChan
+	r.stopChan = stopChan
+
+	r.wg.Add(1)
+	go r.startConsumer(2, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY1, USER_TEST_QUEUE1)
+	r.wg.Add(1)
+	go r.startConsumer(3, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY2, USER_TEST_QUEUE2)
 
 }
 
@@ -144,12 +146,6 @@ func (r *RabbitMQ) StartConsumers(
 //
 //   - workerID: An integer representing the ID of the worker.
 //
-//   - wg: A pointer to a sync.WaitGroup to signal when the consumer has finished.
-//
-//   - errChan: A channel to send errors encountered during the consumer setup and operation.
-//
-//   - stopChan: A channel to signal the consumer to stop listening for messages.
-//
 //   - exchange: The name of the RabbitMQ exchange to bind the queue to.
 //
 //   - routingKey: The routing key to bind the queue to the exchange.
@@ -158,18 +154,12 @@ func (r *RabbitMQ) StartConsumers(
 //
 // The function logs the progress of the consumer setup and listens for messages until
 // a stop signal is received on the stopChan or an error occurs.
-func (r *RabbitMQ) startConsumer(
-	workerID int,
-	wg *sync.WaitGroup,
-	errChan chan<- error,
-	stopChan <-chan struct{},
-	exchange, routingKey, queueName string,
-) {
-	defer wg.Done()
+func (r *RabbitMQ) startConsumer(workerID int, exchange, routingKey, queueName string) {
+	defer r.wg.Done()
 	messageConsumer, err := r.newConsumer(workerID, exchange)
 	if err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		errChan <- errMsg
+		r.errChan <- errMsg
 		return
 	}
 	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared consumer", workerID))
@@ -177,18 +167,18 @@ func (r *RabbitMQ) startConsumer(
 	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		errChan <- errMsg
+		r.errChan <- errMsg
 		return
 	}
 	// Bind queue
 	if err := messageConsumer.bindQueue(routingKey); err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		errChan <- errMsg
+		r.errChan <- errMsg
 		return
 	}
 
 	r.logger.Info(fmt.Sprintf("[worker_%d] start to listen...", workerID))
-	messageConsumer.Listen(stopChan, errChan)
+	messageConsumer.Listen(r.stopChan, r.errChan)
 
 }
 
