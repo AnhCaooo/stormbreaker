@@ -128,17 +128,18 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 			switch msg.RoutingKey {
 			case USER_CREATE_KEY:
 				c.logger.Info(fmt.Sprintf("[worker_%d] received a user created message", c.workerID))
-				var newPriceSettingsForNewUser models.PriceSettings
-				json.Unmarshal(msg.Body, &newPriceSettingsForNewUser)
-				_, err := c.mongo.InsertPriceSettings(newPriceSettingsForNewUser)
+				var newPriceSettings models.PriceSettings
+				json.Unmarshal(msg.Body, &newPriceSettings)
+				_, err := c.mongo.InsertPriceSettings(newPriceSettings)
 				if err != nil {
 					errMsg := fmt.Errorf("[worker_%d] error inserting price settings: %s", c.workerID, err.Error())
 					errChan <- errMsg
 				}
 			case USER_DELETE_KEY:
-				var deletedUserID string = string(msg.Body)
-				c.logger.Info(fmt.Sprintf("[worker_%d] received a user deleted message. UserID: %s", c.workerID, deletedUserID))
-				_, err := c.mongo.DeletePriceSettings(deletedUserID)
+				var deletedPriceSettings models.PriceSettings
+				json.Unmarshal(msg.Body, &deletedPriceSettings)
+				c.logger.Info(fmt.Sprintf("[worker_%d] received a user deleted message. UserID: %s", c.workerID, deletedPriceSettings.UserID))
+				_, err := c.mongo.DeletePriceSettings(deletedPriceSettings.UserID)
 				if err != nil {
 					errMsg := fmt.Errorf("[worker_%d] error delete price settings: %s", c.workerID, err.Error())
 					errChan <- errMsg
