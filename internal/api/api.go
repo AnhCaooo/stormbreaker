@@ -83,11 +83,11 @@ func (a *API) Stop() {
 // applies to all endpoints, like cache, database, CORS, auth middleware, and logging
 func (a *API) newMuxRouter() *mux.Router {
 	// Initialize cache
-	cache := cache.NewCache(a.logger)
+	cache := cache.NewCache(a.logger, a.workerID)
 	// Initialize Middleware
-	middleware := middleware.NewMiddleware(a.logger, a.config)
+	middleware := middleware.NewMiddleware(a.logger, a.config, a.workerID)
 	// Initialize Handler
-	apiHandler := handlers.NewHandler(a.logger, cache, a.mongo)
+	apiHandler := handlers.NewHandler(a.logger, cache, a.mongo, a.workerID)
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(apiHandler)
 
