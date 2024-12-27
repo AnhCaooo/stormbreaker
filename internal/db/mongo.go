@@ -69,7 +69,7 @@ func (db *Mongo) initializeCollection() error {
 
 // getURI retrieves URI connection with Mongo image
 func (db Mongo) getURI() string {
-	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", db.config.Username, db.config.Password, "localhost", db.config.Port)
+	return fmt.Sprintf("mongodb://%s:%s@%s:%s/?timeoutMS=5000", db.config.Username, db.config.Password, db.config.Host, db.config.Port)
 }
 
 // GetPriceSettings retrieves a document by UserID

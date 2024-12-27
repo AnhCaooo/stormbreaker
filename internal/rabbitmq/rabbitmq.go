@@ -76,7 +76,7 @@ func (r *RabbitMQ) EstablishConnection() (err error) {
 }
 
 func (r *RabbitMQ) getURI() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, "localhost", r.config.Port)
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, r.config.Host, r.config.Port)
 }
 
 // CloseConnection closes first all channels then the connection with RabbitMQ server.
