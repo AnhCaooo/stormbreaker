@@ -2,23 +2,21 @@ package rabbitmq
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/AnhCaooo/stormbreaker/internal/db"
+	"github.com/AnhCaooo/stormbreaker/internal/models"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 )
 
 const (
 	USER_NOTIFICATIONS_EXCHANGE string = "user_notifications_exchange"
-	USER_TEST_KEY1              string = "user.test1" // todo: to be removed
-	USER_TEST_KEY2              string = "user.test2" // todo: to be removed
-	USER_CREATED_KEY            string = "user.created"
-	USER_DELETED_KEY            string = "user.deleted"
-	USER_TEST_QUEUE1            string = "user_test_queue1" // todo: to be removed
-	USER_TEST_QUEUE2            string = "user_test_queue2" // todo: to be removed
-	USER_CREATED_QUEUE          string = "user_created_queue"
-	USER_DELETED_QUEUE          string = "user_deleted_queue"
+	USER_CREATE_KEY             string = "user.create"
+	USER_DELETE_KEY             string = "user.delete"
+	USER_CREATION_QUEUE         string = "user_creation_queue"
+	USER_DELETION_QUEUE         string = "user_deletion_queue"
 )
 
 // Consumer represents a RabbitMQ consumer with necessary dependencies and configurations.
@@ -119,20 +117,36 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 				c.logger.Info(fmt.Sprintf("[worker_%d] message channel closed", c.workerID))
 				return
 			}
-			c.logger.Info(
-				fmt.Sprintf("[worker_%d] received a message from %s", c.workerID, c.queue.Name),
-				zap.Any("message", string(msg.Body)),
-			)
-			// Process message
+
 			if err := msg.Ack(false); err != nil {
 				errMsg := fmt.Errorf("[worker_%d] error acknowledging message from %s: %s", c.workerID, c.queue.Name, err.Error())
 				errChan <- errMsg
 				return
-			} else {
-				c.logger.Info(
-					fmt.Sprintf("[worker_%d] acknowledged message from %s", c.workerID, c.queue.Name),
-				)
 			}
+
+			// Process message
+			switch msg.RoutingKey {
+			case USER_CREATE_KEY:
+				c.logger.Info(fmt.Sprintf("[worker_%d] received a user created message", c.workerID))
+				var newPriceSettingsForNewUser models.PriceSettings
+				json.Unmarshal(msg.Body, &newPriceSettingsForNewUser)
+				_, err := c.mongo.InsertPriceSettings(newPriceSettingsForNewUser)
+				if err != nil {
+					errMsg := fmt.Errorf("[worker_%d] error inserting price settings: %s", c.workerID, err.Error())
+					errChan <- errMsg
+				}
+			case USER_DELETE_KEY:
+				var deletedUserID string = string(msg.Body)
+				c.logger.Info(fmt.Sprintf("[worker_%d] received a user deleted message. UserID: %s", c.workerID, deletedUserID))
+				_, err := c.mongo.DeletePriceSettings(deletedUserID)
+				if err != nil {
+					errMsg := fmt.Errorf("[worker_%d] error delete price settings: %s", c.workerID, err.Error())
+					errChan <- errMsg
+				}
+			default:
+				c.logger.Info(fmt.Sprintf("[worker_%d] received an message from undefined routing key: %s", c.workerID, msg.RoutingKey))
+			}
+
 		}
 	}
 }

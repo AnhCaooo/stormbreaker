@@ -51,10 +51,10 @@ func main() {
 	}
 	defer mongo.Client.Disconnect(ctx)
 
-	// Start server
 	run(ctx, logger, configuration, mongo)
 }
 
+// run initializes and starts the HTTP server and RabbitMQ consumers, and listens for OS signals to gracefully shut down.
 func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *db.Mongo) {
 	// Create a signal channel to listen for OS signals
 	stop := make(chan os.Signal, 1)
@@ -64,10 +64,10 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	var wg sync.WaitGroup
 	errChan := make(chan error, 3)
 	stopChan := make(chan struct{})
-
+	// HTTP server
 	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
 	httpServer.Start(1, errChan, &wg)
-
+	// RabbitMQ
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
