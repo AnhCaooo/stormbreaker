@@ -65,40 +65,16 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	errChan := make(chan error, 3)
 	stopChan := make(chan struct{})
 
-	// Run the server in a separate goroutine
 	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
 	wg.Add(1)
+	// Run the server in a separate goroutine
 	go httpServer.Start(1, errChan, &wg)
 
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("Failed to establish connection with RabbitMQ", zap.Error(err))
 	}
-	// Initialize RabbitMQ connections in a separate goroutine
-	wg.Add(1)
-	go func() {
-		rabbitMQ.StartConsumer(
-			2,
-			&wg,
-			errChan,
-			stopChan,
-			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
-			rabbitmq.USER_TEST_KEY1,
-			rabbitmq.USER_TEST_QUEUE1,
-		)
-	}()
-	wg.Add(1)
-	go func() {
-		rabbitMQ.StartConsumer(
-			3,
-			&wg,
-			errChan,
-			stopChan,
-			rabbitmq.USER_NOTIFICATIONS_EXCHANGE,
-			rabbitmq.USER_TEST_KEY2,
-			rabbitmq.USER_TEST_QUEUE2,
-		)
-	}()
+	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
 
 	// Monitor all errors from errChan and log them
 	go func() {

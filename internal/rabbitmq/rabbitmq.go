@@ -124,9 +124,22 @@ func (r *RabbitMQ) NewRabbitMQProducer() (*Producer, error) {
 -------------------------------- CONSUMER METHODS --------------------------------
 */
 
+// StartConsumers creates multiple consumers based on given exchange, routing key, and queue name
+func (r *RabbitMQ) StartConsumers(
+	wg *sync.WaitGroup,
+	errChan chan<- error,
+	stopChan <-chan struct{},
+) {
+	wg.Add(1)
+	go r.startConsumer(2, wg, errChan, stopChan, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY1, USER_TEST_QUEUE1)
+	wg.Add(1)
+	go r.startConsumer(3, wg, errChan, stopChan, USER_NOTIFICATIONS_EXCHANGE, USER_TEST_KEY2, USER_TEST_QUEUE2)
+
+}
+
 // StartConsumer create new RabbitMQ consumer based on given queue name.
 // Then listen to incoming messages from the queue
-func (r *RabbitMQ) StartConsumer(
+func (r *RabbitMQ) startConsumer(
 	workerID int,
 	wg *sync.WaitGroup,
 	errChan chan<- error,
