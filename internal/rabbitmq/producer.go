@@ -9,44 +9,31 @@ import (
 )
 
 type Producer struct {
-	logger  *zap.Logger
-	ctx     context.Context
-	Channel *amqp.Channel
-	queue   *amqp.Queue
-}
-
-// DeclareQueue ensures that the queue is declared and exists before producing messages:
-func (p *Producer) DeclareQueue(queueName string) error {
-	if p.Channel == nil {
-		return fmt.Errorf("producer channel is nil, ensure connection is established")
-	}
-
-	durable, autoDelete, exclusive, noWait := true, false, false, false
-	queue, err := p.Channel.QueueDeclare(
-		queueName,  // queue name
-		durable,    // durable
-		autoDelete, // auto-delete
-		exclusive,  // exclusive
-		noWait,     // no-wait
-		nil,        // args
-	)
-	p.queue = &queue
-	if err != nil {
-		return fmt.Errorf("failed to declare queue: %s", err.Error())
-	}
-	return nil
+	// The AMQP channel used for communication with RabbitMQ.
+	channel *amqp.Channel
+	// The context for managing the consumer's lifecycle and cancellation.
+	ctx context.Context
+	// The name of the RabbitMQ exchange to bind the consumer to.
+	exchange string
+	//  The logger instance for logging consumer activities.
+	logger *zap.Logger
+	// The routing key for the producer.
+	routingKey string
+	// The identifier for the worker handling the consumer.
+	workerID int
 }
 
 // ProduceMessage publishes a message to the queue
 func (p *Producer) ProduceMessage(message string) error {
-	if p.Channel == nil {
-		return fmt.Errorf("channel is nil, ensure connection is established")
+	if p.channel == nil {
+		return fmt.Errorf("[worker_%d] channel is nil, ensure connection is established", p.workerID)
 	}
 
-	exchange, mandatory, immediate := "", false, false
-	err := p.Channel.PublishWithContext(p.ctx,
-		exchange,     // exchange
-		p.queue.Name, // routing key
+	mandatory, immediate := false, false
+	err := p.channel.PublishWithContext(
+		p.ctx,        // context
+		p.exchange,   // exchange
+		p.routingKey, // routing key
 		mandatory,    // mandatory
 		immediate,    // immediate
 		amqp.Publishing{
@@ -54,9 +41,9 @@ func (p *Producer) ProduceMessage(message string) error {
 			Body:        []byte(message),
 		})
 	if err != nil {
-		return fmt.Errorf("failed to publish message: %s", err.Error())
+		return fmt.Errorf("[worker_%d] failed to publish message: %s", p.workerID, err.Error())
 	}
-	p.logger.Info("message was produced successfully", zap.String("message", message))
+	p.logger.Info(fmt.Sprintf("[worker_%d] message was produced successfully", p.workerID), zap.String("message", message))
 	return nil
 
 }
