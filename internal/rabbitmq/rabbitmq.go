@@ -103,19 +103,63 @@ func (r *RabbitMQ) CloseConnection() {
 -------------------------------- PRODUCER METHODS --------------------------------
 */
 
+// StartProducer initializes a new message producer and sends a message to the specified exchange and routing key.
+// It logs the success or failure of the operation and sends any errors encountered to the error channel.
+//
+// Parameters:
+//   - workerID: an integer representing the ID of the worker starting the producer
+//   - exchange: a string specifying the exchange to which the message will be sent
+//   - routingKey: a string specifying the routing key for the message
+//   - message: a string containing the message to be sent
+//
+// The function uses a wait group to signal completion and logs the status of the producer initialization and message production.
+func (r *RabbitMQ) StartProducer(workerID int, exchange, routingKey, message string) error {
+	msgProducer, err := r.newProducer(workerID, exchange, routingKey)
+	if err != nil {
+		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
+		// r.errChan <- errMsg
+		return errMsg
+	}
+	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared channel for producer", workerID))
+	if err := msgProducer.ProduceMessage(message); err != nil {
+		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
+		// r.errChan <- errMsg
+		return errMsg
+	}
+	return nil
+}
+
 // NewProducer retrieves connection client, then opens channel and build producer instance
-// func (r *RabbitMQ) newProducer() (*Producer, error) {
-// 	// create a new channel
-// 	ch, err := r.connection.Channel()
-// 	if err != nil {
-// 		return nil, fmt.Errorf("failed to open a channel for producer: %s", err.Error())
-// 	}
-// 	return &Producer{
-// 		Channel: ch,
-// 		logger:  r.logger,
-// 		ctx:     r.ctx,
-// 	}, nil
-// }
+func (r *RabbitMQ) newProducer(workerID int, exchange, routingKey string) (*Producer, error) {
+	// create a new channel
+	ch, err := r.connection.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("[worker_%d] failed to open a channel for consumer: %s", workerID, err.Error())
+	}
+
+	durable, autoDelete, internal, noWait := true, false, false, false
+	if err = ch.ExchangeDeclare(
+		exchange,      // name
+		exchange_type, // type
+		durable,       // durable
+		autoDelete,    // auto-deleted
+		internal,      // internal
+		noWait,        // no-wait
+		nil,           // arguments
+	); err != nil {
+		return nil, fmt.Errorf("[worker_%d] failed to declare an exchange: %s", workerID, err.Error())
+	}
+
+	r.channels = append(r.channels, ch)
+	return &Producer{
+		channel:    ch,
+		ctx:        r.ctx,
+		exchange:   exchange,
+		logger:     r.logger,
+		routingKey: routingKey,
+		workerID:   workerID,
+	}, nil
+}
 
 /*
 -------------------------------- CONSUMER METHODS --------------------------------
@@ -132,11 +176,16 @@ func (r *RabbitMQ) StartConsumers(
 	r.errChan = errChan
 	r.stopChan = stopChan
 
+	if r.connection == nil {
+		errMsg := fmt.Errorf("RabbitMQ connection is nil, ensure connection is established")
+		r.errChan <- errMsg
+		return
+	}
+
 	r.wg.Add(1)
 	go r.startConsumer(2, USER_NOTIFICATIONS_EXCHANGE, USER_CREATE_KEY, USER_CREATION_QUEUE)
 	r.wg.Add(1)
 	go r.startConsumer(3, USER_NOTIFICATIONS_EXCHANGE, USER_DELETE_KEY, USER_DELETION_QUEUE)
-
 }
 
 // startConsumer starts a RabbitMQ consumer with specific worker.
@@ -162,7 +211,7 @@ func (r *RabbitMQ) startConsumer(workerID int, exchange, routingKey, queueName s
 		r.errChan <- errMsg
 		return
 	}
-	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared consumer", workerID))
+	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared channel for consumer", workerID))
 
 	// Declare queue
 	if err := messageConsumer.declareQueue(queueName); err != nil {
@@ -182,7 +231,6 @@ func (r *RabbitMQ) startConsumer(workerID int, exchange, routingKey, queueName s
 
 }
 
-// Finally build and return consumer instance
 // newConsumer creates a new RabbitMQ consumer with the specified worker ID and exchange name.
 // It opens a new channel, declares the exchange, and returns a Consumer instance.
 //
@@ -199,7 +247,7 @@ func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error)
 	// create a new channel
 	ch, err := r.connection.Channel()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open a channel for consumer: %s", err.Error())
+		return nil, fmt.Errorf("[worker_%d] failed to open a channel for consumer: %s", workerID, err.Error())
 	}
 
 	durable, autoDelete, internal, noWait := true, false, false, false
@@ -212,17 +260,16 @@ func (r *RabbitMQ) newConsumer(workerID int, exchange string) (*Consumer, error)
 		noWait,        // no-wait
 		nil,           // arguments
 	); err != nil {
-		return nil, fmt.Errorf("failed to declare an exchange: %s", err.Error())
+		return nil, fmt.Errorf("[worker_%d] failed to declare an exchange: %s", workerID, err.Error())
 	}
 
 	r.channels = append(r.channels, ch)
 	return &Consumer{
-		channel:    ch,
-		ctx:        r.ctx,
-		exchange:   exchange,
-		logger:     r.logger,
-		mongo:      r.mongo,
-		workerID:   workerID,
-		connection: r.connection,
+		channel:  ch,
+		ctx:      r.ctx,
+		exchange: exchange,
+		logger:   r.logger,
+		mongo:    r.mongo,
+		workerID: workerID,
 	}, nil
 }

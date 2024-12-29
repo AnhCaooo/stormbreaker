@@ -23,8 +23,6 @@ const (
 type Consumer struct {
 	// The AMQP channel used for communication with RabbitMQ.
 	channel *amqp.Channel
-	// The AMQP connection to the RabbitMQ server.
-	connection *amqp.Connection
 	// The context for managing the consumer's lifecycle and cancellation.
 	ctx context.Context
 	// The name of the RabbitMQ exchange to bind the consumer to.
@@ -145,7 +143,7 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 					errChan <- errMsg
 				}
 			default:
-				c.logger.Info(fmt.Sprintf("[worker_%d] received an message from undefined routing key: %s", c.workerID, msg.RoutingKey))
+				c.logger.Info(fmt.Sprintf("[worker_%d] received an message from undefined routing key: '%s' with message: %v", c.workerID, msg.RoutingKey, msg.Body))
 			}
 
 		}
