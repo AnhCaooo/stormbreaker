@@ -145,7 +145,7 @@ func (c *Consumer) Listen(stopChan <-chan struct{}, errChan chan<- error) {
 					errChan <- errMsg
 				}
 			default:
-				c.logger.Info(fmt.Sprintf("[worker_%d] received an message from undefined routing key: %s", c.workerID, msg.RoutingKey))
+				c.logger.Info(fmt.Sprintf("[worker_%d] received an message from undefined routing key: '%s' with message: %v", c.workerID, msg.RoutingKey, msg.Body))
 			}
 
 		}

@@ -132,11 +132,16 @@ func (r *RabbitMQ) StartConsumers(
 	r.errChan = errChan
 	r.stopChan = stopChan
 
+	if r.connection == nil {
+		errMsg := fmt.Errorf("RabbitMQ connection is nil, ensure connection is established")
+		r.errChan <- errMsg
+		return
+	}
+
 	r.wg.Add(1)
 	go r.startConsumer(2, USER_NOTIFICATIONS_EXCHANGE, USER_CREATE_KEY, USER_CREATION_QUEUE)
 	r.wg.Add(1)
 	go r.startConsumer(3, USER_NOTIFICATIONS_EXCHANGE, USER_DELETE_KEY, USER_DELETION_QUEUE)
-
 }
 
 // startConsumer starts a RabbitMQ consumer with specific worker.
