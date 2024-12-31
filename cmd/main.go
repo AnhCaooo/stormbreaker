@@ -35,7 +35,7 @@ func main() {
 
 	// todo: implement to accept a dynamic log level
 	// Initialize logger
-	logger := log.InitLogger(zapcore.DebugLevel)
+	logger := log.InitLogger(zapcore.InfoLevel)
 	defer logger.Sync()
 
 	configuration := &models.Config{}
