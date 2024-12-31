@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -13,6 +14,10 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
 	"go.uber.org/zap"
 )
+
+// pricesMessage is a global variable to store the electricity prices for today and tomorrow
+// and timestamp when the message is ready to produce without the user price settings information.
+var pricesMessage *models.NewPricesMessage
 
 // Scheduler is responsible for managing and coordinating scheduled tasks.
 type Scheduler struct {
@@ -74,9 +79,8 @@ func (s *Scheduler) StopJobs() {
 //  7. Waits until the next polling period and resets the job status.
 func (s *Scheduler) PollPrice(workerID int) {
 	const startTime = 14
-	const endTime = 22
-	ticker := time.NewTicker(5 * time.Second)
-	// ticker := time.NewTicker(10 * time.Minute)
+	const endTime = 17
+	ticker := time.NewTicker(10 * time.Minute)
 	isJobDone := false
 	defer ticker.Stop()
 
@@ -112,16 +116,16 @@ func (s *Scheduler) PollPrice(workerID int) {
 				return
 			}
 			s.logger.Info(fmt.Sprintf("[worker_%d] successfully connected to RabbitMQ", workerID))
-			// send notification
+			// send notifications for all users
+			jsonMessage, _ := json.Marshal(pricesMessage)
 			if err := rabbit.StartProducer(
 				workerID,
 				rabbitmq.PUSH_NOTIFICATION_EXCHANGE,
 				rabbitmq.PUSH_NOTIFICATION_KEY,
-				"electricity price notification",
+				jsonMessage,
 			); err != nil {
 				s.logger.Error(err.Error())
 			}
-			s.logger.Info(fmt.Sprintf("[worker_%d] sent notification", workerID))
 			isJobDone = true
 			// close connection after finish
 			rabbit.CloseConnection()
@@ -184,12 +188,21 @@ func (s *Scheduler) isTomorrowPriceAvailable(workerID int) (bool, error) {
 		return false, err
 	}
 
-	todayTomorrowPrice, err := helpers.MapToTodayTomorrowResponse(prices)
+	todayTomorrowPrices, err := helpers.MapToTodayTomorrowResponse(prices)
 	if err != nil {
 		return false, err
 	}
+	now, _, err := helpers.GetCurrentTimeInHelsinki()
+	if err != nil {
+		s.logger.Error(fmt.Sprintf("[worker_%d] failed to get current time", workerID), zap.Error(err))
+	}
 
-	if todayTomorrowPrice.Tomorrow.Available {
+	pricesMessage = &models.NewPricesMessage{
+		Data:      *todayTomorrowPrices,
+		TimeStamp: now.String(),
+	}
+
+	if todayTomorrowPrices.Tomorrow.Available {
 		return true, nil
 	}
 	return false, nil
