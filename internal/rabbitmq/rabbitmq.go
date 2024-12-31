@@ -56,6 +56,10 @@ type RabbitMQ struct {
 // NewRabbit creates a new instance of RabbitMQ with the provided context, configuration, logger, and MongoDB client.
 // It initializes the RabbitMQ struct with the given parameters.
 func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, mongo *db.Mongo) *RabbitMQ {
+	if config == nil {
+		logger.Fatal("RabbitMQ configuration is nil")
+	}
+
 	return &RabbitMQ{
 		ctx:    ctx,
 		config: config,
@@ -71,12 +75,11 @@ func (r *RabbitMQ) EstablishConnection() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
 	}
-	r.logger.Info("successfully connected to RabbitMQ")
 	return nil
 }
 
 func (r *RabbitMQ) getURI() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, r.config.Host, r.config.Port)
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", r.config.Username, r.config.Password, "localhost", r.config.Port)
 }
 
 // CloseConnection closes first all channels then the connection with RabbitMQ server.

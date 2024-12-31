@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -8,20 +9,26 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
+	"github.com/AnhCaooo/stormbreaker/internal/models"
+	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
 	"go.uber.org/zap"
 )
 
 type Scheduler struct {
-	logger *zap.Logger
-	mongo  *db.Mongo
+	logger       *zap.Logger
+	ctx          context.Context
+	mongo        *db.Mongo
+	brokerConfig *models.Broker
 	// A pointer to a sync.WaitGroup to signal when the consumer has finished.
 	wg *sync.WaitGroup
 }
 
-func NewScheduler(logger *zap.Logger, mongo *db.Mongo) *Scheduler {
+func NewScheduler(ctx context.Context, logger *zap.Logger, brokerConfig *models.Broker, mongo *db.Mongo) *Scheduler {
 	return &Scheduler{
-		logger: logger,
-		mongo:  mongo,
+		logger:       logger,
+		mongo:        mongo,
+		ctx:          ctx,
+		brokerConfig: brokerConfig,
 	}
 }
 
@@ -47,6 +54,7 @@ func (s *Scheduler) PollPrice(workerID int) {
 
 	defer ticker.Stop()
 
+	s.logger.Info(fmt.Sprintf("[worker_%d] starting polling job...", workerID))
 	for {
 		currentTime, err := helpers.GetCurrentTimeInHelsinki()
 		if err != nil {
@@ -56,10 +64,8 @@ func (s *Scheduler) PollPrice(workerID int) {
 		}
 
 		<-ticker.C
-		s.logger.Info(fmt.Sprintf("[worker_%d] starting polling job...", workerID))
-
 		if currentTime.Hour() < startTime || currentTime.Hour() >= endTime {
-			s.logger.Info(fmt.Sprintf("[worker_%d] outside polling hours. Pause polling until next job", workerID), zap.Time("current_time_helsinki", currentTime))
+			s.logger.Info(fmt.Sprintf("[worker_%d] outside polling price hours. Pause polling until next job", workerID), zap.Time("current_time_helsinki", currentTime))
 			s.waitUntilNextPollingPeriod(workerID, startTime, endTime)
 		}
 
@@ -70,10 +76,26 @@ func (s *Scheduler) PollPrice(workerID int) {
 			return
 		}
 		if isPriceAvailableForNotification {
-			s.logger.Info(fmt.Sprintf("[worker_%d] tomorrow price is available. Sending notification", workerID))
-			// create new rabbitmq connection
+			s.logger.Info(fmt.Sprintf("[worker_%d] tomorrow price is available. Sending notifications...", workerID))
+			rabbit := rabbitmq.NewRabbit(s.ctx, s.brokerConfig, s.logger, s.mongo)
+			if err := rabbit.EstablishConnection(); err != nil {
+				errMsg := fmt.Errorf("[worker_%d] failed to establish connection with RabbitMQ: %s", workerID, err.Error())
+				s.logger.Error(errMsg.Error())
+				return
+			}
+			s.logger.Info(fmt.Sprintf("[worker_%d] successfully connected to RabbitMQ", workerID))
 			// send notification
+			if err := rabbit.StartProducer(
+				workerID,
+				rabbitmq.PUSH_NOTIFICATION_EXCHANGE,
+				rabbitmq.PUSH_NOTIFICATION_KEY,
+				"electricity price notification",
+			); err != nil {
+				s.logger.Error(err.Error())
+			}
+			s.logger.Info(fmt.Sprintf("[worker_%d] sent notification", workerID))
 			// close connection after finish
+			rabbit.CloseConnection()
 			return
 		}
 	}
@@ -85,17 +107,16 @@ func (s Scheduler) waitUntilNextPollingPeriod(workerID, startTime, endTime int) 
 	if err != nil {
 		s.logger.Error(fmt.Sprintf("[worker_%d] failed to get current time", workerID), zap.Error(err))
 	}
-
 	nextStart := time.Date(
 		nowInUTC.Year(), nowInUTC.Month(), nowInUTC.Day(),
 		startTime, 0, 0, 0, nowInUTC.Location(),
 	)
 	if nowInUTC.Hour() >= endTime {
 		nextStart = nextStart.Add(24 * time.Hour) // Start polling tomorrow
-		s.logger.Info(fmt.Sprintf("[worker_%d] It's past %d:00. Starting polling at %d:00 tomorrow.", workerID, endTime, startTime))
+		s.logger.Info(fmt.Sprintf("[worker_%d] it is past %d:00. Will start polling at %d:00 tomorrow.", workerID, endTime, startTime))
 	}
 	duration := time.Until(nextStart)
-	s.logger.Info(fmt.Sprintf("[worker_%d] Waiting for %v until the next polling period", workerID, duration))
+	s.logger.Info(fmt.Sprintf("[worker_%d] on holding for %v until the next polling period", workerID, duration))
 	time.Sleep(duration)
 }
 
@@ -117,6 +138,5 @@ func (s *Scheduler) isTomorrowPriceAvailable(workerID int) (bool, error) {
 	if todayTomorrowPrice.Tomorrow.Available {
 		return true, nil
 	}
-
 	return false, nil
 }
