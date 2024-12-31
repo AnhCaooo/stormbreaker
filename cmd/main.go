@@ -16,6 +16,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
+	"github.com/AnhCaooo/stormbreaker/internal/scheduler"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -34,7 +35,7 @@ func main() {
 
 	// todo: implement to accept a dynamic log level
 	// Initialize logger
-	logger := log.InitLogger(zapcore.InfoLevel)
+	logger := log.InitLogger(zapcore.DebugLevel)
 	defer logger.Sync()
 
 	configuration := &models.Config{}
@@ -67,12 +68,17 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	// HTTP server
 	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
 	httpServer.Start(1, errChan, &wg)
+
 	// RabbitMQ
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
 	}
 	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
+
+	// Scheduler worker
+	scheduler := scheduler.NewScheduler(logger, mongo)
+	scheduler.StartJobs(&wg)
 
 	// Monitor all errors from errChan and log them
 	go func() {
@@ -88,6 +94,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	close(stopChan)
 	httpServer.Stop()
 	rabbitMQ.CloseConnection()
+	scheduler.StopJobs()
 	// Wait for all goroutines to finish
 	wg.Wait()
 	// Signal all errors to stop
