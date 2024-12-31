@@ -40,6 +40,21 @@ func GetCurrentTimeInUTC() (time.Time, error) {
 	return currentTime.UTC(), nil
 }
 
+// Get current time in Finnish time then convert to UTC
+func GetCurrentTimeInHelsinki() (time.Time, error) {
+	location, err := loadHelsinkiLocation()
+	if err != nil {
+		return time.Now(), err
+	}
+	now := time.Now().In(location)
+
+	// Get year, month, and day components
+	year, month, day := now.Date()
+	currentTime := time.Date(year, month, day, now.Hour(), now.Minute(), 0, 0, location)
+	// return as UTC
+	return currentTime, nil
+}
+
 func loadHelsinkiLocation() (*time.Location, error) {
 	location, err := time.LoadLocation("Europe/Helsinki")
 	if err != nil {
