@@ -29,7 +29,7 @@ type Producer struct {
 }
 
 // ProduceMessage publishes a message to the queue
-func (p *Producer) ProduceMessage(message string) error {
+func (p *Producer) ProduceMessage(message []byte) error {
 	if p.channel == nil {
 		return fmt.Errorf("[worker_%d] channel is nil, ensure connection is established", p.workerID)
 	}
@@ -42,13 +42,13 @@ func (p *Producer) ProduceMessage(message string) error {
 		mandatory,    // mandatory
 		immediate,    // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(message),
+			ContentType: "application/json",
+			Body:        message,
 		})
 	if err != nil {
 		return fmt.Errorf("[worker_%d] failed to publish message: %s", p.workerID, err.Error())
 	}
-	p.logger.Info(fmt.Sprintf("[worker_%d] message was produced successfully", p.workerID), zap.String("message", message))
+	p.logger.Info(fmt.Sprintf("[worker_%d] message was produced successfully", p.workerID))
 	return nil
 
 }

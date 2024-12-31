@@ -116,17 +116,15 @@ func (r *RabbitMQ) CloseConnection() {
 //   - message: a string containing the message to be sent
 //
 // The function uses a wait group to signal completion and logs the status of the producer initialization and message production.
-func (r *RabbitMQ) StartProducer(workerID int, exchange, routingKey, message string) error {
+func (r *RabbitMQ) StartProducer(workerID int, exchange, routingKey string, message []byte) error {
 	msgProducer, err := r.newProducer(workerID, exchange, routingKey)
 	if err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		// r.errChan <- errMsg
 		return errMsg
 	}
 	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared channel for producer", workerID))
 	if err := msgProducer.ProduceMessage(message); err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		// r.errChan <- errMsg
 		return errMsg
 	}
 	return nil
