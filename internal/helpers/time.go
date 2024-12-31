@@ -40,11 +40,14 @@ func GetCurrentTimeInUTC() (time.Time, error) {
 	return currentTime.UTC(), nil
 }
 
-// Get current time in Finnish time then convert to UTC
-func GetCurrentTimeInHelsinki() (time.Time, error) {
+// Get current time in Finnish time and return the location as pointer to time.Location
+// GetCurrentTimeInHelsinki returns the current time in Helsinki, Finland.
+// It loads the Helsinki location and adjusts the current time to that timezone.
+// The function returns the current time in Helsinki, the location object, and an error if any occurred during the location loading process.
+func GetCurrentTimeInHelsinki() (time.Time, *time.Location, error) {
 	location, err := loadHelsinkiLocation()
 	if err != nil {
-		return time.Now(), err
+		return time.Now(), nil, err
 	}
 	now := time.Now().In(location)
 
@@ -52,7 +55,7 @@ func GetCurrentTimeInHelsinki() (time.Time, error) {
 	year, month, day := now.Date()
 	currentTime := time.Date(year, month, day, now.Hour(), now.Minute(), 0, 0, location)
 	// return as UTC
-	return currentTime, nil
+	return currentTime, location, nil
 }
 
 func loadHelsinkiLocation() (*time.Location, error) {
