@@ -8,6 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	PUSH_NOTIFICATION_EXCHANGE string = "price_notifications"
+	PUSH_NOTIFICATION_KEY      string = "price_notification_key"
+)
+
 type Producer struct {
 	// The AMQP channel used for communication with RabbitMQ.
 	channel *amqp.Channel
