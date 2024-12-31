@@ -74,10 +74,11 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
 	}
+	logger.Info("successfully connected to RabbitMQ")
 	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
 
 	// Scheduler worker
-	scheduler := scheduler.NewScheduler(logger, mongo)
+	scheduler := scheduler.NewScheduler(ctx, logger, &config.MessageBroker, mongo)
 	scheduler.StartJobs(&wg)
 
 	// Monitor all errors from errChan and log them
