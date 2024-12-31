@@ -35,7 +35,7 @@ func NewElectric(logger *zap.Logger, mongo *db.Mongo, userId string) *Electric {
 // Then call this URL in GET request and decode it
 func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (responseData *models.PriceResponse, statusCode int, err error) {
 	var settings *models.PriceSettings
-	if e.mongo == nil {
+	if e.mongo == nil || e.userId == "stormbreaker" {
 		e.logger.Debug("load default price settings")
 		settings = e.getDefaultPriceSettings()
 	} else {
@@ -70,7 +70,7 @@ func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (respon
 // Depending on the time sending request, there could be tomorrow's price come along with today's price.
 // In practice, tomorrow's price would be available around 2pm-4pm everyday
 func (e Electric) FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models.TodayTomorrowPrice, err error) {
-	reqBody := e.buildTodayTomorrowRequestPayload()
+	reqBody := e.BuildTodayTomorrowRequestPayload()
 	todayTomorrowPrice, _, err := e.FetchSpotPrice(reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("%s failed to fetch data: %s", constants.Server, err.Error())
@@ -91,7 +91,7 @@ func (e Electric) FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowRes
 
 // return as request body with date of today and data of tomorrow.
 // Usage: get request body for '/market-price/today-tomorrow'
-func (e Electric) buildTodayTomorrowRequestPayload() *models.PriceRequest {
+func (e Electric) BuildTodayTomorrowRequestPayload() *models.PriceRequest {
 	today, tomorrow := helpers.GetTodayAndTomorrowDateAsString()
 
 	return &models.PriceRequest{
@@ -106,7 +106,7 @@ func (e Electric) buildTodayTomorrowRequestPayload() *models.PriceRequest {
 func (e Electric) getDefaultPriceSettings() *models.PriceSettings {
 	return &models.PriceSettings{
 		UserID:      e.userId,
-		Marginal:    0.59,
+		Marginal:    0.0,
 		VatIncluded: false,
 	}
 }

@@ -64,3 +64,9 @@ type PriceSettings struct {
 	VatIncluded bool    `bson:"vat_included" json:"vat_included" example:"true"` // indicates whether tax is included to price stats or not
 	Marginal    float64 `bson:"margin" json:"margin" example:"0.59"`             // amount of margin applied to price stats
 }
+
+// Represents a struct of data that will be used to send as producing message to RabbitMQ.
+type NewPricesMessage struct {
+	Data      TodayTomorrowPrice `json:"data"`      // Data represents the price of today and tomorrow
+	TimeStamp string             `json:"timestamp"` // TimeStamp represents the time when the message is produced. This will help `notification-service` to decide whether to push notifications or not.
+}

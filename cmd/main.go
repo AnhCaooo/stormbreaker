@@ -16,6 +16,7 @@ import (
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"github.com/AnhCaooo/stormbreaker/internal/rabbitmq"
+	"github.com/AnhCaooo/stormbreaker/internal/scheduler"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -67,12 +68,18 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	// HTTP server
 	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
 	httpServer.Start(1, errChan, &wg)
+
 	// RabbitMQ
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
 	}
+	logger.Info("successfully connected to RabbitMQ")
 	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
+
+	// Scheduler worker
+	scheduler := scheduler.NewScheduler(ctx, logger, &config.MessageBroker, mongo)
+	scheduler.StartJobs(&wg)
 
 	// Monitor all errors from errChan and log them
 	go func() {
@@ -88,6 +95,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	close(stopChan)
 	httpServer.Stop()
 	rabbitMQ.CloseConnection()
+	scheduler.StopJobs()
 	// Wait for all goroutines to finish
 	wg.Wait()
 	// Signal all errors to stop

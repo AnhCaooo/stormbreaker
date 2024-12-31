@@ -40,6 +40,23 @@ func GetCurrentTimeInUTC() (time.Time, error) {
 	return currentTime.UTC(), nil
 }
 
+// GetCurrentTimeInHelsinki returns the current time in Helsinki, Finland.
+// It loads the Helsinki location and adjusts the current time to that timezone.
+// The function returns the current time in Helsinki, the location object, and an error if any occurred during the location loading process.
+func GetCurrentTimeInHelsinki() (time.Time, *time.Location, error) {
+	location, err := loadHelsinkiLocation()
+	if err != nil {
+		return time.Now(), nil, err
+	}
+	now := time.Now().In(location)
+
+	// Get year, month, and day components
+	year, month, day := now.Date()
+	currentTime := time.Date(year, month, day, now.Hour(), now.Minute(), 0, 0, location)
+	// return as UTC
+	return currentTime, location, nil
+}
+
 func loadHelsinkiLocation() (*time.Location, error) {
 	location, err := time.LoadLocation("Europe/Helsinki")
 	if err != nil {

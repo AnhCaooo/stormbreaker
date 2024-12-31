@@ -56,6 +56,10 @@ type RabbitMQ struct {
 // NewRabbit creates a new instance of RabbitMQ with the provided context, configuration, logger, and MongoDB client.
 // It initializes the RabbitMQ struct with the given parameters.
 func NewRabbit(ctx context.Context, config *models.Broker, logger *zap.Logger, mongo *db.Mongo) *RabbitMQ {
+	if config == nil {
+		logger.Fatal("RabbitMQ configuration is nil")
+	}
+
 	return &RabbitMQ{
 		ctx:    ctx,
 		config: config,
@@ -71,7 +75,6 @@ func (r *RabbitMQ) EstablishConnection() (err error) {
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %s", err.Error())
 	}
-	r.logger.Info("successfully connected to RabbitMQ")
 	return nil
 }
 
@@ -113,17 +116,15 @@ func (r *RabbitMQ) CloseConnection() {
 //   - message: a string containing the message to be sent
 //
 // The function uses a wait group to signal completion and logs the status of the producer initialization and message production.
-func (r *RabbitMQ) StartProducer(workerID int, exchange, routingKey, message string) error {
+func (r *RabbitMQ) StartProducer(workerID int, exchange, routingKey string, message []byte) error {
 	msgProducer, err := r.newProducer(workerID, exchange, routingKey)
 	if err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		// r.errChan <- errMsg
 		return errMsg
 	}
 	r.logger.Info(fmt.Sprintf("[worker_%d] successfully declared channel for producer", workerID))
 	if err := msgProducer.ProduceMessage(message); err != nil {
 		errMsg := fmt.Errorf("[worker_%d] %s", workerID, err.Error())
-		// r.errChan <- errMsg
 		return errMsg
 	}
 	return nil
