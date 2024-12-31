@@ -106,7 +106,7 @@ func (e Electric) BuildTodayTomorrowRequestPayload() *models.PriceRequest {
 func (e Electric) getDefaultPriceSettings() *models.PriceSettings {
 	return &models.PriceSettings{
 		UserID:      e.userId,
-		Marginal:    0.59,
+		Marginal:    0.0,
 		VatIncluded: false,
 	}
 }
