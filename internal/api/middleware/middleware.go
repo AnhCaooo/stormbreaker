@@ -30,10 +30,6 @@ func NewMiddleware(logger *zap.Logger, config *models.Config, workerID int) *Mid
 // log the coming request to the server
 func (m *Middleware) Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/swagger/") {
-			next.ServeHTTP(w, r)
-			return
-		}
 		m.logger.Info(fmt.Sprintf("[worker_%d] request received", m.workerID), zap.String("method", r.Method), zap.String("endpoint", r.URL.Path))
 		next.ServeHTTP(w, r)
 	})
@@ -42,6 +38,10 @@ func (m *Middleware) Logger(next http.Handler) http.Handler {
 // read the token from request and do verify the access token
 func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/swagger/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		tokenString := r.Header.Get("Authorization")
 		if tokenString == "" {
 			m.logger.Error(fmt.Sprintf("[worker_%d] permission Denied: No authentication provided in header", m.workerID))
