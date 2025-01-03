@@ -2,7 +2,6 @@
 package cache
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -10,11 +9,16 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	PlainTodayTomorrowPricesKey string = "plain_today_tomorrow_prices"
+	UserTodayTomorrowPricesKey  string = "today_tomorrow_prices"
+	UserPriceSettingsKey        string = "price_settings"
+)
+
 type Cache struct {
-	Data     map[string]CacheValue
-	logger   *zap.Logger
-	lock     sync.Mutex
-	workerID int
+	Data   map[string]CacheValue
+	logger *zap.Logger
+	lock   sync.Mutex
 }
 
 type CacheValue struct {
@@ -23,11 +27,10 @@ type CacheValue struct {
 }
 
 // NewCache returns a new Cache instance
-func NewCache(logger *zap.Logger, workerID int) *Cache {
+func NewCache(logger *zap.Logger) *Cache {
 	return &Cache{
-		Data:     make(map[string]CacheValue),
-		logger:   logger,
-		workerID: workerID,
+		Data:   make(map[string]CacheValue),
+		logger: logger,
 	}
 }
 
@@ -41,10 +44,10 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 
 	now, err := helpers.GetCurrentTimeInUTC()
 	if err != nil {
-		c.logger.Error(fmt.Sprintf("[worker_%d] failed to get current time", c.workerID), zap.Error(err))
+		c.logger.Error("failed to get current time", zap.Error(err))
 	}
 	expirationTime := now.Add(duration)
-	c.logger.Debug(fmt.Sprintf("[worker_%d] time information", c.workerID),
+	c.logger.Debug("time information",
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 		zap.Time("expired-time-utc", expirationTime),
 	)
@@ -59,7 +62,7 @@ func (c *Cache) SetExpiredAfterTimePeriod(key string, value interface{}, duratio
 // It first acquires a lock on the mutex to ensure thread safety, and then it adds the key-value pair to the map along with the expiration time.
 // Finally, it releases the lock.
 func (c *Cache) SetExpiredAtTime(key string, value interface{}, expiredTime time.Time) {
-	c.logger.Debug(fmt.Sprintf("[worker_%d] set cache to be expired at", c.workerID),
+	c.logger.Debug("set cache to be expired at",
 		zap.Time("expired-time-utc", expiredTime),
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 	)
@@ -83,17 +86,18 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 
 	value, exists := c.Data[key]
 	if !exists {
-		c.logger.Debug(fmt.Sprintf("[worker_%d] cache key was not found from cache", c.workerID))
+		c.logger.Debug("cache key was not found from cache")
 		return nil, false
 	}
 	if time.Now().After(value.Expiration) {
-		c.logger.Debug(fmt.Sprintf("[worker_%d] cache was expired", c.workerID),
+		c.logger.Debug("cache was expired",
 			zap.Time("expiration-time-in-utc-zone", value.Expiration),
 			zap.Time("current-time-in-utc-zone", time.Now()),
 		)
+		c.Delete(key)
 		return nil, false
 	}
-	c.logger.Debug(fmt.Sprintf("[worker_%d] cache living time", c.workerID),
+	c.logger.Debug("cache living time",
 		zap.Any("expired-time-in-utc-zone", value.Expiration),
 		zap.Time("current-time-in-utc-zone", time.Now().UTC()),
 	)
@@ -103,5 +107,4 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 // Delete cache based on receiving cache key. If key is not valid, then Delete is no-op
 func (c *Cache) Delete(key string) {
 	delete(c.Data, key)
-
 }

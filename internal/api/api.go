@@ -27,18 +27,26 @@ type API struct {
 	ctx      context.Context
 	logger   *zap.Logger
 	mongo    *db.Mongo
+	cache    *cache.Cache
 	workerID int
 	server   *http.Server
 	wg       *sync.WaitGroup
 }
 
 // NewHTTPServer creates a new HTTP server instance
-func NewHTTPServer(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *db.Mongo) *API {
+func NewHTTPServer(
+	ctx context.Context,
+	logger *zap.Logger,
+	config *models.Config,
+	cache *cache.Cache,
+	mongo *db.Mongo,
+) *API {
 	return &API{
 		ctx:    ctx,
 		config: config,
 		logger: logger,
 		mongo:  mongo,
+		cache:  cache,
 	}
 }
 
@@ -82,12 +90,10 @@ func (a *API) Stop() {
 // newMuxRouter is responsible for all the top-level HTTP stuff that
 // applies to all endpoints, like cache, database, CORS, auth middleware, and logging
 func (a *API) newMuxRouter() *mux.Router {
-	// Initialize cache
-	cache := cache.NewCache(a.logger, a.workerID)
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(a.logger, a.config, a.workerID)
 	// Initialize Handler
-	apiHandler := handlers.NewHandler(a.logger, cache, a.mongo, a.workerID)
+	apiHandler := handlers.NewHandler(a.logger, a.cache, a.mongo, a.workerID)
 	// Initialize Endpoints pool
 	endpoints := routes.InitializeEndpoints(apiHandler)
 

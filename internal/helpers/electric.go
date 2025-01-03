@@ -146,3 +146,40 @@ func getTomorrowPrices(response models.PriceResponse) (tomorrowPrice *models.Dai
 	}
 	return
 }
+
+// MapPriceSettingsWithTodayTomorrowSpotPrice updates the prices in the given
+// TodayTomorrowPrice struct based on the provided PriceSettings. It modifies
+// the IncludeVat and Price fields of the prices for both today and tomorrow
+// if they are available.
+//
+// Parameters:
+//   - priceSettings: A pointer to a PriceSettings struct containing the settings
+//     to be applied to the prices.
+//   - todayTomorrowPrice: A pointer to a TodayTomorrowPrice struct containing
+//     the prices for today and tomorrow.
+//
+// todo: current implementation is not correct. The data after mapping is not correct 100%
+func MapPriceSettingsWithTodayTomorrowSpotPrice(
+	priceSettings *models.PriceSettings,
+	todayTomorrowPrice *models.TodayTomorrowPrice,
+) *models.TodayTomorrowPrice {
+	// Update logic for prices
+	updatePrices := func(prices []models.Data, settings *models.PriceSettings) {
+		for i := range prices {
+			prices[i].IncludeVat = fmt.Sprintf("%d", parseVatIncludedFromBoolToInt32(settings.VatIncluded))
+			prices[i].Price += settings.Marginal
+		}
+	}
+
+	// Update today's prices
+	if todayTomorrowPrice.Today.Available {
+		updatePrices(todayTomorrowPrice.Today.Prices.Data, priceSettings)
+	}
+
+	// Update tomorrow's prices
+	if todayTomorrowPrice.Tomorrow.Available {
+		updatePrices(todayTomorrowPrice.Tomorrow.Prices.Data, priceSettings)
+	}
+
+	return todayTomorrowPrice
+}

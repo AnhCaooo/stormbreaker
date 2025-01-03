@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
+	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
@@ -15,14 +17,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// pricesMessage is a global variable to store the electricity prices for today and tomorrow
-// and timestamp when the message is ready to produce without the user price settings information.
-var pricesMessage *models.NewPricesMessage
-
 // Scheduler is responsible for managing and coordinating scheduled tasks.
 type Scheduler struct {
 	// The logger for logging RabbitMQ-related activities
 	logger *zap.Logger
+	// The cache instance for caching data.
+	cache *cache.Cache
 	// The context for managing the lifecycle of the RabbitMQ instance.
 	ctx context.Context
 	// The MongoDB instance for database operations.
@@ -34,11 +34,18 @@ type Scheduler struct {
 }
 
 // NewScheduler creates a new instance of Scheduler with the provided context, logger, broker configuration, and MongoDB connection.
-func NewScheduler(ctx context.Context, logger *zap.Logger, brokerConfig *models.Broker, mongo *db.Mongo) *Scheduler {
+func NewScheduler(
+	ctx context.Context,
+	logger *zap.Logger,
+	brokerConfig *models.Broker,
+	cache *cache.Cache,
+	mongo *db.Mongo,
+) *Scheduler {
 	return &Scheduler{
 		logger:       logger,
 		mongo:        mongo,
 		ctx:          ctx,
+		cache:        cache,
 		brokerConfig: brokerConfig,
 	}
 }
@@ -108,6 +115,12 @@ func (s *Scheduler) PollPrice(workerID int) {
 		}
 
 		if isPriceAvailableForNotification && !isJobDone {
+			pricesMessage, exists := s.cache.Get(cache.PlainTodayTomorrowPricesKey)
+			if !exists {
+				s.logger.Error(fmt.Sprintf("[worker_%d] failed to load plain spot price for today and tomorrow from cache", workerID))
+				return
+			}
+
 			s.logger.Info(fmt.Sprintf("[worker_%d] tomorrow price is available. Sending notifications...", workerID))
 			rabbit := rabbitmq.NewRabbit(s.ctx, s.brokerConfig, s.logger, s.mongo)
 			if err := rabbit.EstablishConnection(); err != nil {
@@ -167,20 +180,11 @@ func (s Scheduler) waitUntilNextPollingPeriod(workerID, startTime, endTime int, 
 }
 
 // isTomorrowPriceAvailable checks if the price for tomorrow is available.
-// It logs the process and fetches the spot price using the electric service.
+// It fetches and caches the plain spot price (no margins and no tax included) using the electric service.
 // It returns a boolean indicating the availability of tomorrow's price and an error if any occurs.
-//
-// Parameters:
-//
-//	workerID (int): The ID of the worker performing the check.
-//
-// Returns:
-//
-//	bool: True if tomorrow's price is available, false otherwise.
-//	error: An error object if an error occurs during the process.
 func (s *Scheduler) isTomorrowPriceAvailable(workerID int) (bool, error) {
 	s.logger.Info(fmt.Sprintf("[worker_%d] checking if tomorrow price is available...", workerID))
-	electric := electric.NewElectric(s.logger, s.mongo, "stormbreaker")
+	electric := electric.NewElectric(s.logger, s.mongo, "stormbreaker", nil)
 
 	payloadForTodayTomorrow := electric.BuildTodayTomorrowRequestPayload()
 	prices, _, err := electric.FetchSpotPrice(payloadForTodayTomorrow)
@@ -197,10 +201,19 @@ func (s *Scheduler) isTomorrowPriceAvailable(workerID int) (bool, error) {
 		s.logger.Error(fmt.Sprintf("[worker_%d] failed to get current time", workerID), zap.Error(err))
 	}
 
-	pricesMessage = &models.NewPricesMessage{
+	pricesMessage := &models.NewPricesMessage{
 		Data:      *todayTomorrowPrices,
 		TimeStamp: now.String(),
 	}
+	// Cache the plain spot price for today and tomorrow with timestamp
+	expiredTime, err := helpers.SetTime(23, 59)
+	if err != nil {
+		s.logger.Error(
+			fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", workerID, constants.Server),
+			zap.Error(err),
+		)
+	}
+	s.cache.SetExpiredAtTime(cache.PlainTodayTomorrowPricesKey, pricesMessage, expiredTime)
 
 	if todayTomorrowPrices.Tomorrow.Available {
 		return true, nil

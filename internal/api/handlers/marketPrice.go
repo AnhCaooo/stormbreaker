@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AnhCaooo/go-goods/encode"
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
@@ -27,7 +28,7 @@ import (
 //	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/market-price [post]
 func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(constants.UserIdKey).(string)
+	userID, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
@@ -40,7 +41,13 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	electric := electric.NewElectric(h.logger, h.mongo, userId)
+	settings, _, err := h.LoadPriceSettings(userID)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	electric := electric.NewElectric(h.logger, h.mongo, userID, settings)
 	externalData, statusCode, err := electric.FetchSpotPrice(&reqBody)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
@@ -76,15 +83,48 @@ func (h Handler) PostMarketPrice(w http.ResponseWriter, r *http.Request) {
 //	@Failure		500	{string}	string "Various reasons: cannot fetch price from 3rd party, failed to read settings from db, etc."
 //	@Router			/v1/market-price/today-tomorrow [get]
 func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
-	userId, ok := r.Context().Value(constants.UserIdKey).(string)
+	userID, ok := r.Context().Value(constants.UserIdKey).(string)
 	if !ok {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s-today-tomorrow-exchange-price", userId)
 
-	cachePrice, isValid := h.cache.Get(cacheKey)
+	settings, _, err := h.LoadPriceSettings(userID)
+	if err != nil {
+		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Load plain price and do mapping with price settings
+	cachePlainPrice, isValid := h.cache.Get(cache.PlainTodayTomorrowPricesKey)
 	if isValid {
+		pricesMessage, err := helpers.MapInterfaceToStruct[models.NewPricesMessage](cachePlainPrice)
+		if err != nil {
+			h.logger.Error(fmt.Sprintf("[worker_%d] [cache] failed to cast cache data to NewPricesMessage", h.workerID))
+			http.Error(w, "Failed to cast cache data to NewPricesMessage", http.StatusInternalServerError)
+			return
+		}
+
+		// map the price settings with plain current spot price
+		todayTomorrowPrices := helpers.MapPriceSettingsWithTodayTomorrowSpotPrice(settings, &pricesMessage.Data)
+		h.logger.Debug(fmt.Sprintf("[worker_%d] [cache] mapped price settings with plain prices", h.workerID))
+		if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowPrices); err != nil {
+			h.logger.Error(
+				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
+				zap.Error(err),
+			)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully from plain cache prices and price settings", h.workerID))
+		return
+	}
+
+	// If plain price is not available, then try to load specific user's spot prices
+	cachePriceKey := fmt.Sprintf("%s_%s", userID, cache.UserTodayTomorrowPricesKey)
+	cachePrice, exists := h.cache.Get(cachePriceKey)
+	if exists {
 		if err := encode.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
 			h.logger.Error(
 				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
@@ -93,11 +133,12 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully", h.workerID))
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully from specific user's cache ", h.workerID))
 		return
 	}
 
-	electric := electric.NewElectric(h.logger, h.mongo, userId)
+	// If both plain and specific user's spot prices are not available, then fetch from external source
+	electric := electric.NewElectric(h.logger, h.mongo, userID, settings)
 	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
 		h.logger.Error(
@@ -119,7 +160,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
-		h.cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
+		h.cache.SetExpiredAtTime(cachePriceKey, &todayTomorrowResponse, expiredTime)
 		return
 	}
 	// if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
@@ -132,6 +173,6 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if time.Now().Before(expiredTime) {
-		h.cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
+		h.cache.SetExpiredAtTime(cachePriceKey, &todayTomorrowResponse, expiredTime)
 	}
 }
