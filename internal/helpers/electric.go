@@ -157,17 +157,16 @@ func getTomorrowPrices(response models.PriceResponse) (tomorrowPrice *models.Dai
 //     to be applied to the prices.
 //   - todayTomorrowPrice: A pointer to a TodayTomorrowPrice struct containing
 //     the prices for today and tomorrow.
+//
+// todo: current implementation is not correct. The data after mapping is not correct 100%
 func MapPriceSettingsWithTodayTomorrowSpotPrice(
 	priceSettings *models.PriceSettings,
 	todayTomorrowPrice *models.TodayTomorrowPrice,
 ) *models.TodayTomorrowPrice {
-	var mappedData *models.TodayTomorrowPrice
-
 	// Update logic for prices
 	updatePrices := func(prices []models.Data, settings *models.PriceSettings) {
 		for i := range prices {
-			// Update IncludeVat and Price as needed
-			prices[i].IncludeVat = string(parseVatIncludedFromBoolToInt32(settings.VatIncluded))
+			prices[i].IncludeVat = fmt.Sprintf("%d", parseVatIncludedFromBoolToInt32(settings.VatIncluded))
 			prices[i].Price += settings.Marginal
 		}
 	}
@@ -182,5 +181,5 @@ func MapPriceSettingsWithTodayTomorrowSpotPrice(
 		updatePrices(todayTomorrowPrice.Tomorrow.Prices.Data, priceSettings)
 	}
 
-	return mappedData
+	return todayTomorrowPrice
 }
