@@ -33,11 +33,13 @@ func NewElectric(logger *zap.Logger, mongo *db.Mongo, userId string, priceSettin
 	}
 }
 
-// Receive request body as struct, beautify it and return as URL string.
-// Then call this URL in GET request and decode it
+// FetchSpotPrice fetches the spot price based on the provided request parameters.
+// It first checks if the price settings or MongoDB connection are available.
+// If not, it loads the default price settings. It then formats the request parameters
+// and makes an HTTP GET request to an external source to fetch the data.
 func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (responseData *models.PriceResponse, statusCode int, err error) {
 	var settings *models.PriceSettings = e.priceSettings
-	if e.mongo == nil || e.priceSettings == nil || e.userId == "stormbreaker" {
+	if e.mongo == nil || settings == nil || e.userId == "stormbreaker" {
 		e.logger.Debug("load default price settings")
 		settings = e.getDefaultPriceSettings()
 	}

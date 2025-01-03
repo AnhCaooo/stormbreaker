@@ -8,6 +8,7 @@ import (
 	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
+	"github.com/AnhCaooo/stormbreaker/internal/helpers"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.uber.org/zap"
 )
@@ -55,10 +56,11 @@ func (h Handler) LoadPriceSettings(userID string) (settings *models.PriceSetting
 	cacheKey := fmt.Sprintf("%s_%s", userID, cache.UserPriceSettingsKey)
 	settingsInCache, exists := h.cache.Get(cacheKey)
 	if exists {
-		settings, ok := settingsInCache.(*models.PriceSettings)
-		if !ok {
-			return nil, http.StatusInternalServerError, fmt.Errorf("failed to cast cache data to PriceSettings struct")
+		settings, err := helpers.MapInterfaceToStruct[models.PriceSettings](settingsInCache)
+		if err != nil {
+			return nil, http.StatusInternalServerError, fmt.Errorf("failed to cast cache data to PriceSettings struct: %s", err.Error())
 		}
+		h.logger.Debug(fmt.Sprintf("[worker_%d] %s [cache] load price settings successfully", h.workerID, constants.Server))
 		return settings, http.StatusOK, nil
 	}
 
@@ -66,7 +68,7 @@ func (h Handler) LoadPriceSettings(userID string) (settings *models.PriceSetting
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
-
+	h.logger.Debug(fmt.Sprintf("[worker_%d] %s [db] load price settings successfully", h.workerID, constants.Server))
 	// cache price settings and keep for 24 hours
 	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Hour*time.Duration(24))
 	return settings, statusCode, nil

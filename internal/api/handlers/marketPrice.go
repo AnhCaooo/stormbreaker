@@ -97,20 +97,15 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 
 	cachePrice, isValid := h.cache.Get(cache.PlainTodayTomorrowPricesKey)
 	if isValid {
-		pricesMessage, ok := cachePrice.(*models.NewPricesMessage)
-		if !ok {
-			h.logger.Error(fmt.Sprintf("[worker_%d] failed to cast cache data to NewPricesMessage", h.workerID))
+		pricesMessage, err := helpers.MapInterfaceToStruct[models.NewPricesMessage](cachePrice)
+		if err != nil {
+			h.logger.Error(fmt.Sprintf("[worker_%d] [cache] failed to cast cache data to NewPricesMessage", h.workerID))
 			http.Error(w, "Failed to cast cache data to NewPricesMessage", http.StatusInternalServerError)
 			return
 		}
 
-		todayTomorrowPrices := helpers.MapPriceSettingsWithTodayTomorrowSpotPrice(settings, &pricesMessage.Data)
 		// map the price settings with plain current spot price
-		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] will map the data with price settings", h.workerID),
-			zap.Any("cache", pricesMessage.Data),
-			zap.Any("todayTomorrowPrices", todayTomorrowPrices),
-		)
-
+		todayTomorrowPrices := helpers.MapPriceSettingsWithTodayTomorrowSpotPrice(settings, &pricesMessage.Data)
 		if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowPrices); err != nil {
 			h.logger.Error(
 				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
