@@ -90,8 +90,6 @@ func (a *API) Stop() {
 // newMuxRouter is responsible for all the top-level HTTP stuff that
 // applies to all endpoints, like cache, database, CORS, auth middleware, and logging
 func (a *API) newMuxRouter() *mux.Router {
-	// // Initialize cache
-	// cache := cache.NewCache(a.logger, a.workerID)
 	// Initialize Middleware
 	middleware := middleware.NewMiddleware(a.logger, a.config, a.workerID)
 	// Initialize Handler
