@@ -191,8 +191,8 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cacheKey := fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey)
-	h.cache.Delete(cacheKey)
+	h.cache.Delete(fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey))
+	h.cache.Delete(fmt.Sprintf("%s_%s", userId, cache.UserTodayTomorrowPricesKey))
 }
 
 // todo: maybe only Admin can perform this action? (to be considered)
@@ -235,7 +235,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey)
-	h.cache.Delete(cacheKey)
+	h.cache.Delete(fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey))
+	h.cache.Delete(fmt.Sprintf("%s_%s", userId, cache.UserTodayTomorrowPricesKey))
 
 }
