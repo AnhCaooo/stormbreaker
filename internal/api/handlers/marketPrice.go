@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/AnhCaooo/go-goods/encode"
 	"github.com/AnhCaooo/stormbreaker/internal/cache"
@@ -95,9 +96,10 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cachePrice, isValid := h.cache.Get(cache.PlainTodayTomorrowPricesKey)
+	// Load plain price and do mapping with price settings
+	cachePlainPrice, isValid := h.cache.Get(cache.PlainTodayTomorrowPricesKey)
 	if isValid {
-		pricesMessage, err := helpers.MapInterfaceToStruct[models.NewPricesMessage](cachePrice)
+		pricesMessage, err := helpers.MapInterfaceToStruct[models.NewPricesMessage](cachePlainPrice)
 		if err != nil {
 			h.logger.Error(fmt.Sprintf("[worker_%d] [cache] failed to cast cache data to NewPricesMessage", h.workerID))
 			http.Error(w, "Failed to cast cache data to NewPricesMessage", http.StatusInternalServerError)
@@ -118,8 +120,25 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If plain price is not available, then try to load specific user's spot prices
+	cachePriceKey := fmt.Sprintf("%s_%s", userID, cache.UserTodayTomorrowPricesKey)
+	cachePrice, exists := h.cache.Get(cachePriceKey)
+	if exists {
+		if err := encode.EncodeResponse(w, http.StatusOK, cachePrice); err != nil {
+			h.logger.Error(
+				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
+				zap.Error(err),
+			)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully", h.workerID))
+		return
+	}
+
+	// If both plain and specific user's spot prices are not available, then fetch from external source
 	electric := electric.NewElectric(h.logger, h.mongo, userID, settings)
-	_, err = electric.FetchCurrentSpotPrice(w)
+	todayTomorrowResponse, err := electric.FetchCurrentSpotPrice(w)
 	if err != nil {
 		h.logger.Error(
 			fmt.Sprintf("[worker_%d] %s failed to fetch today and/or tomorrow spot price from external source", h.workerID, constants.Server),
@@ -129,30 +148,30 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// // Cache response to improve performance
-	// // if tomorrow price is available already, then cache until 23:59
-	// if todayTomorrowResponse.Tomorrow.Available {
-	// 	expiredTime, err := helpers.SetTime(23, 59)
-	// 	if err != nil {
-	// 		h.logger.Error(
-	// 			fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
-	// 			zap.Error(err),
-	// 		)
-	// 		return
-	// 	}
-	// 	h.cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
-	// 	return
-	// }
-	// // if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
-	// expiredTime, err := helpers.SetTime(14, 00)
-	// if err != nil {
-	// 	h.logger.Error(
-	// 		fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
-	// 		zap.Error(err),
-	// 	)
-	// 	return
-	// }
-	// if time.Now().Before(expiredTime) {
-	// 	h.cache.SetExpiredAtTime(cacheKey, &todayTomorrowResponse, expiredTime)
-	// }
+	// Cache response to improve performance
+	// if tomorrow price is available already, then cache until 23:59
+	if todayTomorrowResponse.Tomorrow.Available {
+		expiredTime, err := helpers.SetTime(23, 59)
+		if err != nil {
+			h.logger.Error(
+				fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
+				zap.Error(err),
+			)
+			return
+		}
+		h.cache.SetExpiredAtTime(cachePriceKey, &todayTomorrowResponse, expiredTime)
+		return
+	}
+	// if tomorrow price is not available and sending request time is before 14:00, then cache until 14:00
+	expiredTime, err := helpers.SetTime(14, 00)
+	if err != nil {
+		h.logger.Error(
+			fmt.Sprintf("[worker_%d] %s failed to set expired time for caching", h.workerID, constants.Server),
+			zap.Error(err),
+		)
+		return
+	}
+	if time.Now().Before(expiredTime) {
+		h.cache.SetExpiredAtTime(cachePriceKey, &todayTomorrowResponse, expiredTime)
+	}
 }

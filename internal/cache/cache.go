@@ -11,6 +11,7 @@ import (
 
 const (
 	PlainTodayTomorrowPricesKey string = "plain_today_tomorrow_prices"
+	UserTodayTomorrowPricesKey  string = "today_tomorrow_prices"
 	UserPriceSettingsKey        string = "price_settings"
 )
 
