@@ -108,6 +108,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 
 		// map the price settings with plain current spot price
 		todayTomorrowPrices := helpers.MapPriceSettingsWithTodayTomorrowSpotPrice(settings, &pricesMessage.Data)
+		h.logger.Debug(fmt.Sprintf("[worker_%d] [cache] mapped price settings with plain prices", h.workerID))
 		if err := encode.EncodeResponse(w, http.StatusOK, todayTomorrowPrices); err != nil {
 			h.logger.Error(
 				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
@@ -116,7 +117,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully", h.workerID))
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully from plain cache prices and price settings", h.workerID))
 		return
 	}
 
@@ -132,7 +133,7 @@ func (h Handler) GetTodayTomorrowPrice(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully", h.workerID))
+		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get today and tomorrow's exchange price successfully from specific user's cache ", h.workerID))
 		return
 	}
 
