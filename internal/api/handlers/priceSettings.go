@@ -6,12 +6,12 @@ import (
 	"time"
 
 	"github.com/AnhCaooo/go-goods/encode"
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/models"
 	"go.uber.org/zap"
 )
 
-// todo: cache the price settings to improve performance
 // GetPriceSettings retrieves the price settings for specific user
 //
 //	@Summary		Retrieves the price settings for specific user
@@ -30,23 +30,7 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s-price-settings", userId)
-
-	cacheSettings, isValid := h.cache.Get(cacheKey)
-	if isValid {
-		if err := encode.EncodeResponse(w, http.StatusOK, cacheSettings); err != nil {
-			h.logger.Error(
-				fmt.Sprintf("[worker_%d] %s failed to encode cache data", h.workerID, constants.Server),
-				zap.Error(err),
-			)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		h.logger.Info(fmt.Sprintf("[worker_%d] [cache] get price settings successfully", h.workerID))
-		return
-	}
-
-	settings, statusCode, err := h.mongo.GetPriceSettings(userId)
+	settings, statusCode, err := h.LoadPriceSettings(userId)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("[worker_%d] %s", h.workerID, constants.Server), zap.Error(err))
 		http.Error(w, err.Error(), statusCode)
@@ -62,9 +46,30 @@ func (h Handler) GetPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// cache price settings and keep for 1 hours
-	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Hour*time.Duration(1))
+}
 
+// LoadPriceSettings retrieves the price settings for a given user ID.
+// It first checks if the settings are available in the cache. If found, it returns the cached settings.
+// If not found in the cache, it fetches the settings from the MongoDB database, caches them for 24 hours, and then returns them.
+func (h Handler) LoadPriceSettings(userID string) (settings *models.PriceSettings, statusCode int, err error) {
+	cacheKey := fmt.Sprintf("%s_%s", userID, cache.UserPriceSettingsKey)
+	settingsInCache, exists := h.cache.Get(cacheKey)
+	if exists {
+		settings, ok := settingsInCache.(*models.PriceSettings)
+		if !ok {
+			return nil, http.StatusInternalServerError, fmt.Errorf("failed to cast cache data to PriceSettings struct")
+		}
+		return settings, http.StatusOK, nil
+	}
+
+	settings, statusCode, err = h.mongo.GetPriceSettings(userID)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	// cache price settings and keep for 24 hours
+	h.cache.SetExpiredAfterTimePeriod(cacheKey, &settings, time.Hour*time.Duration(24))
+	return settings, statusCode, nil
 }
 
 // CreatePriceSettings creates a new price settings for user
@@ -147,7 +152,6 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s-price-settings", userId)
 
 	reqBody, err := encode.DecodeRequest[models.PriceSettings](r)
 	if err != nil {
@@ -185,6 +189,7 @@ func (h Handler) PatchPriceSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey)
 	h.cache.Delete(cacheKey)
 }
 
@@ -208,7 +213,6 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found in context", http.StatusUnauthorized)
 		return
 	}
-	cacheKey := fmt.Sprintf("%s-price-settings", userId)
 
 	statusCode, err := h.mongo.DeletePriceSettings(userId)
 	if err != nil {
@@ -229,6 +233,7 @@ func (h Handler) DeletePriceSettings(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	cacheKey := fmt.Sprintf("%s_%s", userId, cache.UserPriceSettingsKey)
 	h.cache.Delete(cacheKey)
 
 }

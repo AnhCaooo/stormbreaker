@@ -14,36 +14,32 @@ import (
 )
 
 type Electric struct {
-	logger *zap.Logger
-	mongo  *db.Mongo
-	userId string
+	logger        *zap.Logger
+	mongo         *db.Mongo
+	userId        string
+	priceSettings *models.PriceSettings
 }
 
-func NewElectric(logger *zap.Logger, mongo *db.Mongo, userId string) *Electric {
+func NewElectric(logger *zap.Logger, mongo *db.Mongo, userId string, priceSettings *models.PriceSettings) *Electric {
 	if mongo == nil {
 		logger.Warn("MongoDB client is nil, using mock or no-op database")
 	}
 
 	return &Electric{
-		logger: logger,
-		mongo:  mongo,
-		userId: userId,
+		logger:        logger,
+		mongo:         mongo,
+		userId:        userId,
+		priceSettings: priceSettings,
 	}
 }
 
 // Receive request body as struct, beautify it and return as URL string.
 // Then call this URL in GET request and decode it
 func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (responseData *models.PriceResponse, statusCode int, err error) {
-	var settings *models.PriceSettings
-	if e.mongo == nil || e.userId == "stormbreaker" {
+	var settings *models.PriceSettings = e.priceSettings
+	if e.mongo == nil || e.priceSettings == nil || e.userId == "stormbreaker" {
 		e.logger.Debug("load default price settings")
 		settings = e.getDefaultPriceSettings()
-	} else {
-		e.logger.Debug("load price settings from Mongo")
-		settings, statusCode, err = e.mongo.GetPriceSettings(e.userId)
-		if err != nil {
-			return nil, statusCode, err
-		}
 	}
 
 	externalUrl, err := helpers.FormatMarketPricePostReqParameters(requestParameters, settings)
@@ -66,9 +62,11 @@ func (e Electric) FetchSpotPrice(requestParameters *models.PriceRequest) (respon
 	return
 }
 
-// fetch, return current spot price and write the status, result to response.
+// FetchCurrentSpotPrice retrieves the current spot price for today and tomorrow,
+// maps the data to a response structure, and writes the response to the provided
+// http.ResponseWriter. It returns the mapped response and any error encountered.
 // Depending on the time sending request, there could be tomorrow's price come along with today's price.
-// In practice, tomorrow's price would be available around 2pm-4pm everyday
+// In practice, tomorrow's price would be available around 3pm (Finnish time) everyday.
 func (e Electric) FetchCurrentSpotPrice(w http.ResponseWriter) (todayTomorrowResponse *models.TodayTomorrowPrice, err error) {
 	reqBody := e.BuildTodayTomorrowRequestPayload()
 	todayTomorrowPrice, _, err := e.FetchSpotPrice(reqBody)

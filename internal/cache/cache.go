@@ -11,6 +11,7 @@ import (
 
 const (
 	PlainTodayTomorrowPricesKey string = "plain_today_tomorrow_prices"
+	UserPriceSettingsKey        string = "price_settings"
 )
 
 type Cache struct {
@@ -105,5 +106,4 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 // Delete cache based on receiving cache key. If key is not valid, then Delete is no-op
 func (c *Cache) Delete(key string) {
 	delete(c.Data, key)
-
 }
