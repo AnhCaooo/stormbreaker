@@ -9,6 +9,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	PlainTodayTomorrowPricesKey string = "plain_today_tomorrow_prices"
+)
+
 type Cache struct {
 	Data   map[string]CacheValue
 	logger *zap.Logger
@@ -88,6 +92,7 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 			zap.Time("expiration-time-in-utc-zone", value.Expiration),
 			zap.Time("current-time-in-utc-zone", time.Now()),
 		)
+		c.Delete(key)
 		return nil, false
 	}
 	c.logger.Debug("cache living time",
