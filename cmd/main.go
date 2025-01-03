@@ -11,6 +11,7 @@ import (
 	"github.com/AnhCaooo/go-goods/log"
 	_ "github.com/AnhCaooo/stormbreaker/docs"
 	"github.com/AnhCaooo/stormbreaker/internal/api"
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/config"
 	"github.com/AnhCaooo/stormbreaker/internal/constants"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
@@ -45,6 +46,9 @@ func main() {
 		logger.Fatal(constants.Server, zap.Error(err))
 	}
 
+	// Initialize cache
+	cache := cache.NewCache(logger)
+
 	// Initialize database connection
 	mongo := db.NewMongo(ctx, &configuration.Database, logger)
 	if err := mongo.EstablishConnection(); err != nil {
@@ -52,11 +56,17 @@ func main() {
 	}
 	defer mongo.Client.Disconnect(ctx)
 
-	run(ctx, logger, configuration, mongo)
+	run(ctx, logger, configuration, mongo, cache)
 }
 
 // run initializes and starts the HTTP server and RabbitMQ consumers, and listens for OS signals to gracefully shut down.
-func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *db.Mongo) {
+func run(
+	ctx context.Context,
+	logger *zap.Logger,
+	config *models.Config,
+	mongo *db.Mongo,
+	cache *cache.Cache,
+) {
 	// Create a signal channel to listen for OS signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
@@ -66,10 +76,10 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	errChan := make(chan error, 3)
 	stopChan := make(chan struct{})
 	// HTTP server
-	httpServer := api.NewHTTPServer(ctx, logger, config, mongo)
+	httpServer := api.NewHTTPServer(ctx, logger, config, cache, mongo)
 	httpServer.Start(1, errChan, &wg)
 
-	// RabbitMQ
+	// RabbitMQ consumers
 	rabbitMQ := rabbitmq.NewRabbit(ctx, &config.MessageBroker, logger, mongo)
 	if err := rabbitMQ.EstablishConnection(); err != nil {
 		logger.Fatal("failed to establish connection with RabbitMQ", zap.Error(err))
@@ -78,7 +88,7 @@ func run(ctx context.Context, logger *zap.Logger, config *models.Config, mongo *
 	rabbitMQ.StartConsumers(&wg, errChan, stopChan)
 
 	// Scheduler worker
-	scheduler := scheduler.NewScheduler(ctx, logger, &config.MessageBroker, mongo)
+	scheduler := scheduler.NewScheduler(ctx, logger, &config.MessageBroker, cache, mongo)
 	scheduler.StartJobs(&wg)
 
 	// Monitor all errors from errChan and log them

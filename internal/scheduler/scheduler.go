@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AnhCaooo/stormbreaker/internal/cache"
 	"github.com/AnhCaooo/stormbreaker/internal/db"
 	"github.com/AnhCaooo/stormbreaker/internal/electric"
 	"github.com/AnhCaooo/stormbreaker/internal/helpers"
@@ -23,6 +24,8 @@ var pricesMessage *models.NewPricesMessage
 type Scheduler struct {
 	// The logger for logging RabbitMQ-related activities
 	logger *zap.Logger
+	// The cache instance for caching data.
+	cache *cache.Cache
 	// The context for managing the lifecycle of the RabbitMQ instance.
 	ctx context.Context
 	// The MongoDB instance for database operations.
@@ -34,11 +37,18 @@ type Scheduler struct {
 }
 
 // NewScheduler creates a new instance of Scheduler with the provided context, logger, broker configuration, and MongoDB connection.
-func NewScheduler(ctx context.Context, logger *zap.Logger, brokerConfig *models.Broker, mongo *db.Mongo) *Scheduler {
+func NewScheduler(
+	ctx context.Context,
+	logger *zap.Logger,
+	brokerConfig *models.Broker,
+	cache *cache.Cache,
+	mongo *db.Mongo,
+) *Scheduler {
 	return &Scheduler{
 		logger:       logger,
 		mongo:        mongo,
 		ctx:          ctx,
+		cache:        cache,
 		brokerConfig: brokerConfig,
 	}
 }

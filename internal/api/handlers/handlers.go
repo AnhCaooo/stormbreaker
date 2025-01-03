@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Handler represents a struct that contains dependencies for handling API requests.
 type Handler struct {
 	logger   *zap.Logger
 	cache    *cache.Cache
